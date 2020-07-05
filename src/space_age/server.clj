@@ -4,33 +4,35 @@
             [space-age.handler :refer [gemini-handler]]
             [space-age.logging :refer [log]]))
 
-(defn read-socket
-  "Read a line of textual data from the given socket"
-  [socket]
-  (let [reader (io/reader socket)]
-    (.readLine reader)))
+(defonce server (atom nil))
 
-(defn write-socket
-  "Send the given string message out over the given socket"
-  [socket msg]
+(defn read-socket [socket]
+  (.readLine (io/reader socket)))
+
+(defn write-socket [socket msg]
   (let [writer (io/writer socket)]
     (.write writer msg)
     (.flush writer)))
 
-(defonce server-running? (atom false))
-
 ;; FIXME: Implement TLS handshake (see section 4 of Gemini spec)
 (defn start-server! [port handler]
-  (future
-    (with-open [server-socket (ServerSocket. port)]
-      (reset! server-running? true)
-      (while @server-running?
-        (with-open [socket (.accept server-socket)]
-          (write-socket socket (handler (read-socket socket))))))))
+  (if @server
+    (log "Server is already running.")
+    (reset! server
+            (future
+              (with-open [server-socket (ServerSocket. port)]
+                (while true
+                  (with-open [socket (.accept server-socket)]
+                    (write-socket socket (handler (read-socket socket))))))))))
 
+;; FIXME: Server does not stop
 (defn stop-server! []
-  (reset! server-running? false)
-  (log "Server stopped."))
+  (if @server
+    (do
+      (future-cancel @server)
+      (reset! server nil)
+      (log "Server stopped."))
+    (log "Server is not running.")))
 
 (defn -main [& [port]]
   (let [port (cond

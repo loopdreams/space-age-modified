@@ -44,6 +44,7 @@
 (defn permanent-failure-response [msg]
   (str "50 " msg "\r\n"))
 
+;; FIXME: stub
 (defn client-certificate-required-response []
   (str "60\r\n"))
 
@@ -58,9 +59,9 @@
                 "jpeg"   "image/jpeg"})
 
 ;; FIXME: stub
-;; Example URI: gemini://myhost.org/foo/bar?baz=buzz
+;; Example URI: gemini://myhost.org/foo/bar?baz=buzz&boz=bazizzle
 (defn gemini-handler [uri]
   (log uri)
-  (if-let [{:keys [uri scheme host path query] :as request} (parse-uri uri)]
+  (if-let [{:keys [uri scheme host path params] :as request} (parse-uri uri)]
     (success-response (mime-type "txt") (str request))
     (permanent-failure-response "Malformed URI")))

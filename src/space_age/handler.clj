@@ -27,23 +27,24 @@
         (catch UnsupportedEncodingException e {})))
     {}))
 
-;; FIXME: Include optional port match
 (def gemini-uri-regex #"^([a-z]+)://([^/]+)([^\?]*)(\?.+)?$")
 
 (defn parse-uri [uri]
-  (when-let [[uri scheme host path query] (->> uri
-                                               (str/trim)
-                                               (str/lower-case)
-                                               (re-find gemini-uri-regex))]
-    {:scheme scheme
-     :host   host
-     :path   path
-     :params (parse-query query)}))
+  (when-let [[_ scheme host+port path query] (->> uri
+                                                  (str/trim)
+                                                  (str/lower-case)
+                                                  (re-find gemini-uri-regex))]
+    (let [[host port] (str/split host+port #":")]
+      {:scheme scheme
+       :host   host
+       :port   port
+       :path   path
+       :params (parse-query query)})))
 
 ;; FIXME: Handle conditions on successful URI parsing
 ;; Example URI: gemini://myhost.org/foo/bar?baz=buzz&boz=bazizzle\r\n
 (defn gemini-handler [uri]
   (log uri)
-  (if-let [{:keys [scheme host path params] :as request} (parse-uri uri)]
+  (if-let [{:keys [scheme host port path params] :as request} (parse-uri uri)]
     (success-response (mime-type "txt") (str request))
     (permanent-failure-response "Malformed URI")))

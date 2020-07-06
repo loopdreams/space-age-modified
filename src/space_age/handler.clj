@@ -1,6 +1,5 @@
 (ns space-age.handler
   (:import java.net.URLDecoder
-           java.io.UnsupportedEncodingException
            java.nio.charset.StandardCharsets)
   (:require [clojure.string :as str]
             [space-age.logging :refer [log]]
@@ -18,28 +17,28 @@
     (let [kv-pairs (-> query
                        (subs 1)
                        (str/split #"&"))]
-      (try
-        (reduce (fn [acc kv-pair]
-                  (let [[k v] (str/split kv-pair #"=")]
-                    (assoc acc (url-decode k) (url-decode v))))
-                {}
-                kv-pairs)
-        (catch UnsupportedEncodingException e {})))
+      (reduce (fn [acc kv-pair]
+                (let [[k v] (str/split kv-pair #"=")]
+                  (assoc acc (url-decode k) (url-decode v))))
+              {}
+              kv-pairs))
     {}))
 
 (def gemini-uri-regex #"^([a-z]+)://([^/]+)([^\?]*)(\?.+)?$")
 
 (defn parse-uri [uri]
-  (when-let [[_ scheme host+port path query] (->> uri
-                                                  (str/trim)
-                                                  (str/lower-case)
-                                                  (re-find gemini-uri-regex))]
-    (let [[host port] (str/split host+port #":")]
-      {:scheme scheme
-       :host   host
-       :port   port
-       :path   path
-       :params (parse-query query)})))
+  (try
+    (when-let [[_ scheme host+port path query] (->> uri
+                                                    (str/trim)
+                                                    (str/lower-case)
+                                                    (re-find gemini-uri-regex))]
+      (let [[host port] (str/split host+port #":")]
+        {:scheme scheme
+         :host   host
+         :port   (if port (Integer/parseInt port) 1965)
+         :path   path
+         :params (parse-query query)}))
+    (catch Exception e nil)))
 
 ;; FIXME: Handle conditions on successful URI parsing
 ;; Example URI: gemini://myhost.org/foo/bar?baz=buzz&boz=bazizzle\r\n

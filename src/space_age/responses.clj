@@ -1,6 +1,6 @@
 (ns space-age.responses)
 
-(defn query-response [prompt]
+(defn input-response [prompt]
   (str "10 " prompt "\r\n"))
 
 ;; FIXME: Handle binary data in body
@@ -17,8 +17,8 @@
   (str "50 " msg "\r\n"))
 
 ;; FIXME: stub
-(defn client-certificate-required-response []
-  (str "60\r\n"))
+(defn client-certificate-required-response [msg]
+  (str "60 " msg "\r\n"))
 
 ;; FIXME: Verify that these are correct
 (def mime-type {"gmi"    "text/gemini; charset=utf-8"

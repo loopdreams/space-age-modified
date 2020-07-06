@@ -27,6 +27,7 @@
         (catch UnsupportedEncodingException e {})))
     {}))
 
+;; FIXME: Include optional port match
 (def gemini-uri-regex #"^([a-z]+)://([^/]+)([^\?]*)(\?.+)?$")
 
 (defn parse-uri [uri]
@@ -39,7 +40,7 @@
      :path   path
      :params (parse-query query)}))
 
-;; FIXME: stub
+;; FIXME: Handle conditions on successful URI parsing
 ;; Example URI: gemini://myhost.org/foo/bar?baz=buzz&boz=bazizzle\r\n
 (defn gemini-handler [uri]
   (log uri)

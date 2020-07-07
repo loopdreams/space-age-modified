@@ -23,17 +23,16 @@
               {}
               kv-pairs))))
 
-(def gemini-uri-regex #"^([a-z]+)://([^/]+)/?([^\?]*)(\?.+)?$")
+(def gemini-uri-regex #"^([A-Za-z]+)://([^/]+)/?([^\?]*)(\?.+)?$")
 
 (defn parse-uri [uri]
   (try
     (when-let [[_ scheme host+port route query] (->> uri
                                                      (str/trim)
-                                                     (str/lower-case)
                                                      (re-find gemini-uri-regex))]
       (let [[host port] (str/split host+port #":")]
-        {:scheme  scheme
-         :host    host
+        {:scheme  (str/lower-case scheme)
+         :host    (str/lower-case host)
          :port    (if port (Integer/parseInt port) 1965)
          :route   route
          :params  (parse-query query)}))

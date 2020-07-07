@@ -1,8 +1,9 @@
 (ns space-age.server
   (:import java.net.ServerSocket)
   (:require [clojure.java.io :as io]
+            [space-age.logging :refer [log]]
             [space-age.handler :refer [gemini-handler]]
-            [space-age.logging :refer [log]]))
+            [space-age.mime-types :refer [load-mime-types!]]))
 
 (defonce server-running? (atom false))
 
@@ -19,6 +20,8 @@
   (if @server-running?
     (log "Server is already running.")
     (do
+      (log "Starting server...")
+      (load-mime-types!)
       (reset! server-running? true)
       (future
         (with-open [server-socket (ServerSocket. port)]

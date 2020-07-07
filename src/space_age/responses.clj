@@ -19,13 +19,3 @@
 ;; FIXME: stub
 (defn client-certificate-required-response [msg]
   (str "60 " msg "\r\n"))
-
-;; FIXME: Verify that these are correct
-(def mime-type {"gmi"    "text/gemini; charset=utf-8"
-                "gemini" "text/gemini; charset=utf-8"
-                "txt"    "text/plain; charset=utf-8"
-                "html"   "text/html; charset=utf-8"
-                "png"    "image/png"
-                "gif"    "image/gif"
-                "jpg"    "image/jpeg"
-                "jpeg"   "image/jpeg"})

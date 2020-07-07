@@ -6,7 +6,7 @@
 
 (defn load-mime-types! []
   (reset! mime-types
-          (with-open [reader (io/reader (io/resource "mime.types"))]
+          (with-open [reader (io/reader (io/resource "mime-types.conf"))]
             (into {}
                   (mapcat (fn [line]
                             (let [[mime-type & extensions] (str/split line #"\s+")

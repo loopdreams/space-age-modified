@@ -1,0 +1,7 @@
+Use this command to generate a 2048 bit RSA key pair and self-signed certificate (SHA256withRSA) with a validity of 365 days:
+
+#+begin_src sh
+$ keytool -genkey -keyalg RSA -alias selfsigned -keystore resources/keystore.jks -storepass moonshot -validity 365 -keysize 2048
+#+end_src
+
+You should fill in the Common Name field with your site's domain name (e.g., www.foobar.org).

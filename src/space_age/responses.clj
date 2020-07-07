@@ -60,4 +60,4 @@
           (if (.exists file)
             (permanent-failure-response "File exists but is not readable.")
             (permanent-failure-response "File not found.")))))
-    (catch Exception e (temporary-failure-response (str "Server error: " (.getMessage e))))))
+    (catch Exception e (temporary-failure-response (str "Error processing request: " (.getMessage e))))))

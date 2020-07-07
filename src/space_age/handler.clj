@@ -3,9 +3,8 @@
            java.nio.charset.StandardCharsets)
   (:require [clojure.string :as str]
             [space-age.logging :refer [log]]
-            [space-age.mime-types :refer [get-mime-type]]
-            [space-age.responses :refer [success-response
-                                         permanent-failure-response]]))
+            [space-age.responses :refer [permanent-failure-response
+                                         process-request]]))
 
 (def utf-8 (.name StandardCharsets/UTF_8))
 
@@ -40,13 +39,11 @@
          :params (parse-query query)}))
     (catch Exception e nil)))
 
-;; FIXME: Handle conditions on successful URI parsing
-;;        .isFile
-;;        .isDirectory
-;;        .canRead
 ;; Example URI: gemini://myhost.org/foo/bar?baz=buzz&boz=bazizzle\r\n
 (defn gemini-handler [uri]
   (log uri)
-  (if-let [{:keys [scheme host port path params] :as request} (parse-uri uri)]
-    (success-response (get-mime-type "foo.txt") (str request))
-    (permanent-failure-response "Malformed URI")))
+  (if-let [request (parse-uri uri)]
+    (if (not= "gemini" (:scheme request))
+      (permanent-failure-response (str "Protocol \"" (:scheme request) "\" is not supported."))
+      (process-request request))
+    (permanent-failure-response "Malformed URI.")))

@@ -21,6 +21,5 @@
   (when-let [last-dot (str/last-index-of filename \.)]
     (str/lower-case (subs filename (inc last-dot)))))
 
-;; FIXME: Detect if a filename with no extension is text or binary
 (defn get-mime-type [filename]
   (get @mime-types (get-extension filename) "application/octet-stream"))

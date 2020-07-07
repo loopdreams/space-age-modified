@@ -10,24 +10,52 @@
 (defn read-socket [socket]
   (.readLine (io/reader socket)))
 
-(defn write-socket [socket msg]
-  (let [writer (io/writer socket)]
-    (.write writer msg)
-    (.flush writer)))
+;; FIXME: An exception is thrown if the data is too large
+(defn write-socket [socket data]
+  (if (string? data)
+    (let [writer (io/writer socket)]
+      (.write writer data)
+      (.flush writer))
+    (let [[msg body] data
+          writer     (io/writer socket)
+          stream     (io/output-stream socket)]
+      (.write writer msg)
+      (.flush writer)
+      (.write stream body)
+      (.flush stream))))
 
 ;; FIXME: Implement TLS handshake (see section 4 of Gemini spec)
-(defn start-server! [port handler]
-  (if @server-running?
-    (log "Server is already running.")
-    (do
-      (log "Starting server...")
-      (load-mime-types!)
-      (reset! server-running? true)
-      (future
-        (with-open [server-socket (ServerSocket. port)]
-          (while @server-running?
-            (with-open [socket (.accept server-socket)]
-              (write-socket socket (handler (read-socket socket))))))))))
+(defn start-server! [& [document-root port]]
+  (let [port (cond
+               (nil? port)     1965
+               (integer? port) port
+               (string? port)  (Integer/parseInt port)
+               :else           1965)]
+    (cond
+      @server-running?
+      (log "Server is already running.")
+
+      (not (string? document-root))
+      (log "Missing inputs: document-root [port]")
+
+      (not (.isDirectory (io/file document-root)))
+      (log "Document root" document-root "is not a directory.")
+
+      (not (.canRead (io/file document-root)))
+      (log (str "No read access to document root " document-root "."))
+
+      :else
+      (do
+        (log (str "Starting server on port " port "."))
+        (load-mime-types!)
+        (reset! server-running? true)
+        (future
+          (with-open [server-socket (ServerSocket. port)]
+            (while @server-running?
+              (with-open [socket (.accept server-socket)]
+                (->> (read-socket socket)
+                     (gemini-handler document-root)
+                     (write-socket socket))))))))))
 
 (defn stop-server! []
   (if @server-running?
@@ -36,13 +64,7 @@
       (log "Server stopped."))
     (log "Server is not running.")))
 
-(defn -main [& [port]]
-  (let [port (cond
-               (nil? port)     1965
-               (integer? port) port
-               (string? port)  (Integer/parseInt port)
-               :else           1965)]
-    (start-server! port gemini-handler)))
+(def -main start-server!)
 
 ;; 4 TLS
 

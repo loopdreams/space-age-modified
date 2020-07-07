@@ -10,19 +10,24 @@
 (defn read-socket [socket]
   (.readLine (io/reader socket)))
 
-;; FIXME: An exception is thrown if the data is too large
 (defn write-socket [socket data]
   (if (string? data)
     (let [writer (io/writer socket)]
       (.write writer data)
       (.flush writer))
-    (let [[msg body] data
-          writer     (io/writer socket)
-          stream     (io/output-stream socket)]
-      (.write writer msg)
-      (.flush writer)
-      (.write stream body)
-      (.flush stream))))
+    (let [[type body] data]
+      (if (string? body)
+        (let [writer (io/writer socket)]
+          (.write writer type)
+          (.write writer body)
+          (.flush writer))
+        (let [writer     (io/writer socket)
+              out-stream (io/output-stream socket)]
+          (with-open [in-stream (io/input-stream body)]
+            (.write writer type)
+            (.flush writer)
+            (.transferTo in-stream out-stream)
+            (.flush out-stream)))))))
 
 ;; FIXME: Implement TLS handshake (see section 4 of Gemini spec)
 (defn start-server! [& [document-root port]]

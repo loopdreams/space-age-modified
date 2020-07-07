@@ -7,6 +7,7 @@
 (defn input-response [prompt]
   (str "10 " prompt "\r\n"))
 
+;; body can be either a string or a java.io.File
 (defn success-response [type body]
   [(str "20 " type "\r\n") body])
 
@@ -44,17 +45,19 @@
 ;; requested, we serve up its index.gmi or index.gemini if available.
 ;; Otherwise, we make a directory listing of links.
 (defn process-request [document-root {:keys [route params]}]
-  (let [file (route->file document-root route)]
-    (if (and (.isFile file) (.canRead file))
-      (success-response (get-mime-type (.getName file)) (.getBytes file))
-      (if (and (.isDirectory file) (.canRead file))
-        (if-let [index-file (->> ["index.gmi" "index.gemini"]
-                                 (map #(io/file file %))
-                                 (filter #(and (.isFile %) (.canRead %)))
-                                 (first))]
-          (success-response (get-mime-type (.getName index-file)) (.getBytes index-file))
-          (success-response (get-mime-type "directory.gmi")
-                            (.getBytes (make-directory-listing route file))))
-        (if (.exists file)
-          (permanent-failure-response "File exists but is not readable.")
-          (permanent-failure-response "File not found."))))))
+  (try
+    (let [file (route->file document-root route)]
+      (if (and (.isFile file) (.canRead file))
+        (success-response (get-mime-type (.getName file)) file)
+        (if (and (.isDirectory file) (.canRead file))
+          (if-let [index-file (->> ["index.gmi" "index.gemini"]
+                                   (map #(io/file file %))
+                                   (filter #(and (.isFile %) (.canRead %)))
+                                   (first))]
+            (success-response (get-mime-type (.getName index-file)) index-file)
+            (success-response (get-mime-type "directory.gmi")
+                              (make-directory-listing route file)))
+          (if (.exists file)
+            (permanent-failure-response "File exists but is not readable.")
+            (permanent-failure-response "File not found.")))))
+    (catch Exception e (temporary-failure-response (str "Server error: " (.getMessage e))))))

@@ -37,7 +37,7 @@
     (let [user-home (str/replace (System/getenv "HOME")
                                  (System/getenv "USER")
                                  user)]
-      (io/file user-home file-path))
+      (io/file user-home "public_gemini" file-path))
     (io/file document-root route)))
 
 ;; Currently we serve up any readable file under a user's home

@@ -25,12 +25,16 @@
   (str "60 " msg "\r\n"))
 
 (defn make-directory-listing [route ^File directory]
-  (let [route (if (str/ends-with? route "/") route (str route "/"))]
+  (let [dir-name (last (remove str/blank? (str/split route #"/")))
+        route (cond
+                (str/blank? route)         ""
+                (str/ends-with? route "/") route
+                :else                      (str route "/"))]
     (->> (.listFiles directory)
-         (map #(str "=> " route (.getName %) " " (.getName %)))
+         (map #(str "=> " dir-name "/" (.getName %) " " (.getName %)))
          (sort)
          (str/join "\n")
-         (str "Directory Listing: " route "\n\n"))))
+         (str "Directory Listing: /" route "\n\n"))))
 
 (defn route->file [document-root route]
   (if-let [[_ user file-path] (re-find #"^~([^/]+)/?(.*)$" route)]

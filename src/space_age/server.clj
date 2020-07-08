@@ -13,25 +13,24 @@
 (defn read-socket [socket]
   (.readLine (io/reader socket)))
 
-;; FIXME: Use doto
 (defn write-socket [socket data]
   (if (string? data)
-    (let [writer (io/writer socket)]
-      (.write writer data)
-      (.flush writer))
+    (doto (io/writer socket)
+      (.write data)
+      (.flush))
     (let [[type body] data]
       (if (string? body)
-        (let [writer (io/writer socket)]
-          (.write writer type)
-          (.write writer body)
-          (.flush writer))
-        (let [writer     (io/writer socket)
-              out-stream (io/output-stream socket)]
-          (with-open [in-stream (io/input-stream body)]
-            (.write writer type)
-            (.flush writer)
-            (.transferTo in-stream out-stream)
-            (.flush out-stream)))))))
+        (doto (io/writer socket)
+          (.write type)
+          (.write body)
+          (.flush))
+        (with-open [in-stream  (io/input-stream body)
+                    out-stream (io/output-stream socket)]
+          (doto (io/writer socket)
+            (.write type)
+            (.flush))
+          (.transferTo in-stream out-stream)
+          (.flush out-stream))))))
 
 (defn start-server! [& [document-root port]]
   (let [port (cond

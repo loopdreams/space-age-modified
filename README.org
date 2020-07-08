@@ -1,6 +1,6 @@
-* Space-Age
+* Space Age
 
-Space-Age is a Gemini server written in Clojure. It implements Gemini
+Space Age is a Gemini server written in Clojure. It implements Gemini
 protocol specification v0.14.2 (July 2nd 2020), which can be found
 here:
 
@@ -141,7 +141,7 @@ Examples:
 
 Every time a file is sent to the client, the Gemini protocol requires
 that it be accompanied by metadata specifying the mime-type of the
-file's contents. Currently, Space-Age will attempt to autodetect each
+file's contents. Currently, Space Age will attempt to autodetect each
 file's mime-type based on its file extension.
 
 The list of all supported mime-types can be found in

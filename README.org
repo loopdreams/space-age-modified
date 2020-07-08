@@ -1,10 +1,14 @@
 * Space Age
 
-Space Age is a Gemini server written in Clojure. It implements Gemini
-protocol specification v0.14.2 (July 2nd 2020), which can be found
-here:
+Space Age is a Gemini server written in Clojure (https://clojure.org/).
+
+It implements Gemini protocol specification v0.14.2 (July 2nd 2020),
+which can be found here:
 
   gemini://gemini.circumlunar.space/docs/specification.gmi
+
+*NOTE:* Client certificates have not yet been implemented but should
+        be soon.
 
 ** Installation Requirements
 

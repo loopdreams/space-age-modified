@@ -1,7 +1,185 @@
-Use this command to generate a 2048 bit RSA key pair and self-signed certificate (SHA256withRSA) with a validity of 365 days:
+* Space-Age
+
+Space-Age is a Gemini server written in Clojure. It implements Gemini
+protocol specification v0.14.2 (July 2nd 2020), which can be found
+here:
+
+  gemini://gemini.circumlunar.space/docs/specification.gmi
+
+** Installation Requirements
+
+- [[https://jdk.java.net][Java Development Kit (version 11+)]]
+- [[https://clojure.org/guides/getting_started][Clojure CLI tools]]
+
+** Creating a TLS Certificate
+
+The Gemini protocol is mandated to use TLS encryption for all
+connections. Therefore, you will need to create a TLS certificate for
+your server before you can launch it. Fortunately, the Gemini
+specification recommends that clients use a "Trust On First Use"
+(TOFU) policy of accepting certificates from servers without checking
+them against a third-party Certificate Authority (CA).
+
+Instead, the client should store the certificate locally and verify
+that the same certificate is presented to the client each time it
+revisits the same server. If the certificate changes before its
+expiration date, the client should warn the user and let them decide
+what action to take in response.
+
+What this means for you as someone running a Gemini server is that you
+can use a self-signed certificate to get going for free without
+running into any likely issues with clients.
+
+Use the "keytool" command (that comes with the JDK you installed
+earlier) to generate a 2048 bit RSA key pair and self-signed
+certificate (SHA256withRSA) with a validity of 365 days:
 
 #+begin_src sh
 $ keytool -genkey -keyalg RSA -alias selfsigned -keystore resources/keystore.jks -storepass moonshot -validity 365 -keysize 2048
 #+end_src
 
-You should fill in the Common Name field with your site's domain name (e.g., www.foobar.org).
+When run from this repository's toplevel directory, this command will
+create a keystore.jks file in the resources directory with password
+"moonshot". If you want the file to have a different name or password
+or to be located somewhere else, just change the keytool arguments
+accordingly.
+
+*NOTE:* When prompted by the command, you should fill in the Common
+        Name field with your site's domain name (e.g.,
+        www.foobar.org).
+
+Finally, you will need to update the toplevel deps.edn file with the
+correct name and password for your generated certificate file if you
+don't use the defaults provided in the keytool command above. Just
+update the values assigned to these two attributes under the :jvm-opts
+settings in the :run-server alias:
+
+- javax.net.ssl.keyStore
+- javax.net.ssl.keyStorePassword
+
+** Running the Server
+
+To launch the Gemini server, simply navigate to the repository's
+toplevel directory and run this command:
+
+#+begin_src sh
+$ clojure -A:run-server /my/document/root/directory
+#+end_src
+
+This will start the server on port 1965 and will use
+/my/document/root/directory as its document root. You can then browse
+to that directory by pointing your Gemini client at:
+
+  gemini://localhost/
+
+The server will have the same read permissions as whatever user runs
+it, so ensure that the content in your document root is readable to
+either that user, a group that it belongs to, or anyone on the local
+machine.
+
+As it runs, the Gemini server will log any requests that it receives
+to standard out with timestamps. Feel free to redirect these to a log
+file of your choosing. On a Unix system, this can be accomplished like
+so:
+
+#+begin_src sh
+$ clojure -A:run-server /my/document/root/directory &> some_file.log
+#+end_src
+
+If you would like to run the server on a different port, you can
+specify that as the second argument to the run-server alias like so:
+
+#+begin_src sh
+$ clojure -A:run-server /my/document/root/directory 31337
+#+end_src
+
+** Mapping Routes to the Filesystem
+
+By default, any incoming requests will be mapped to file paths under
+the document root directory specified at server start time. Regular
+files (of both text and binary types) will be returned to the client
+provided that they are readable to the server.
+
+Examples:
+
+|------------------------------------+------------------------------------------------|
+| URL                                | Resolved File                                  |
+|------------------------------------+------------------------------------------------|
+| gemini://localhost/                | /my/document/root/directory/index.{gmi,gemini} |
+| gemini://localhost/foo.gmi         | /my/document/root/directory/foo.gmi            |
+| gemini://localhost/foo/bar/baz.png | /my/document/root/directory/foo/bar/baz.png    |
+|------------------------------------+------------------------------------------------|
+
+If a (readable) directory is requested, then one of two things will
+happen:
+
+1. An index.gmi or index.gemini file in that directory will be
+   returned to the client.
+
+2. If no index file is present, the server will automatically create a
+   directory listing in text/gemini format and return that to the
+   client. Each file or directory contained within the requested
+   directory will be represented by a link for easy navigation through
+   the filesystem.
+
+If the requested route begins with /~someuser, the Gemini server will
+map the remainder of the route to a public_gemini directory under
+someuser's home directory. Keep in mind that this directory and its
+contents must be readable to the server for this to work.
+
+Examples:
+
+|----------------------------------------------+-------------------------------------------------|
+| URL                                          | Resolved File                                   |
+|----------------------------------------------+-------------------------------------------------|
+| gemini://localhost/~someuser                 | /home/someuser/public_gemini/index.{gmi,gemini} |
+| gemini://localhost/~someuser/foo.gmi         | /home/someuser/public_gemini/foo.gmi            |
+| gemini://localhost/~someuser/foo/bar/baz.png | /home/someuser/public_gemini/foo/bar/baz.png    |
+|----------------------------------------------+-------------------------------------------------|
+
+** Handling MIME Types
+
+Every time a file is sent to the client, the Gemini protocol requires
+that it be accompanied by metadata specifying the mime-type of the
+file's contents. Currently, Space-Age will attempt to autodetect each
+file's mime-type based on its file extension.
+
+The list of all supported mime-types can be found in
+resources/mime-types.conf. If you would like to serve files with
+extensions that are not included in this file, you can simply add them
+to it and restart the server for the changes to take effect.
+
+*NOTE:* If the file extension cannot be detected (or the file has no
+extension), the Gemini server will fall back to use
+"application/octet-stream" as the default mime-type.
+
+** Gemtext Markup
+
+The Gemini specification details a lightweight markup language called
+gemtext. This is what you would use in your *.gmi and *.gemini files
+to build up the contents of your site (called a "capsule" within the
+Gemini community). A quick introduction to gemtext markup can be found
+at the following link:
+
+  gemini://gemini.circumlunar.space/docs/gemtext.gmi
+
+** Further Reading
+
+For more information on the Gemini protocol, its specification, and
+gemtext markup or to find a Gemini client (or a different server),
+check out the Project Gemini capsule here:
+
+  gemini://gemini.circumlunar.space/
+
+If you haven't yet installed a Gemini client, get yourself
+bootstrapped by visiting the Project Gemini capsule via web proxy:
+
+  https://portal.mozz.us/gemini/gemini.circumlunar.space/
+
+** License and Distribution
+
+Copyright © 2020 Gary W. Johnson <lambdatronic@disroot.org>
+
+This software is distributed under the terms of the Eclipse Public
+License version 2.0 (or at the recipient's discretion, any later
+version). See LICENSE.txt in this repository for further details.

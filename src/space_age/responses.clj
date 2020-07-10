@@ -2,7 +2,7 @@
   (:import java.io.File)
   (:require [clojure.string :as str]
             [clojure.java.io :as io]
-            [space-age.mime-types :refer [get-mime-type]]))
+            [space-age.mime-types :refer [get-extension get-mime-type]]))
 
 (defn input-response [prompt]
   (str "10 " prompt "\r\n"))
@@ -44,6 +44,17 @@
       (io/file user-home "public_gemini" file-path))
     (io/file document-root route)))
 
+(defn run-clj-script [^File file params]
+  (try
+    (binding [*ns* (create-ns (gensym "script"))]
+      (refer-clojure)
+      (intern *ns* 'request-params params)
+      (let [script-output (with-out-str (load-file (.getPath file)))]
+        (success-response (get-mime-type "script.gmi") script-output)))
+    (catch Exception e
+      (.printStackTrace e)
+      (permanent-failure-response (str "Script error: " (.getMessage e))))))
+
 ;; Currently we serve up any readable file under a user's home
 ;; directory or the document-root directory. If a directory is
 ;; requested, we serve up its index.gmi or index.gemini if available.
@@ -52,7 +63,11 @@
   (try
     (let [file (route->file document-root route)]
       (if (and (.isFile file) (.canRead file))
-        (success-response (get-mime-type (.getName file)) file)
+        (let [filename (.getName file)]
+          (if (and (= "clj" (get-extension filename))
+                   (.canExecute file))
+            (run-clj-script file params)
+            (success-response (get-mime-type filename) file)))
         (if (and (.isDirectory file) (.canRead file))
           (if-let [index-file (->> ["index.gmi" "index.gemini"]
                                    (map #(io/file file %))
@@ -64,4 +79,5 @@
           (if (.exists file)
             (permanent-failure-response "File exists but is not readable.")
             (permanent-failure-response "File not found.")))))
-    (catch Exception e (temporary-failure-response (str "Error processing request: " (.getMessage e))))))
+    (catch Exception e
+      (temporary-failure-response (str "Error processing request: " (.getMessage e))))))

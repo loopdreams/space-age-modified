@@ -141,6 +141,40 @@ Examples:
 | gemini://localhost/~someuser/foo/bar/baz.png | /home/someuser/public_gemini/foo/bar/baz.png    |
 |----------------------------------------------+-------------------------------------------------|
 
+** Running CLJ Scripts
+
+If a URL resolves to an executable CLJ file, it will be loaded and run
+with the server's permissions in an auto-generated temporary
+namespace. Therefore, you don't need to define one within your CLJ
+file with the usual "ns" form. This also means that any "def*" forms
+in your script (e.g., def, defn, defmacro) won't pollute the server's
+pre-existing namespaces.
+
+Within the CLJ script, you will automatically have access to
+everything in the clojure.core namespace and can use "require" and
+"import" to load any additional Clojure namespaces or Java classes
+within these languages' respective standard libaries. You may also
+load namespaces from any other libraries included in the :deps map
+within the server's toplevel deps.edn file.
+
+If any query params were passed as part of the request URL, they can
+be accessed in a Clojure map stored in a namespace-global variable
+called "request-params".
+
+Anything that your script writes to standard out (e.g., using "print"
+or "println") will be collected and returned to the client as the
+contents of a text/gemini document (metadata: 20 text/gemini;
+charset=utf-8). Please refer to the [[Gemtext Markup]] section below for
+details on this syntax.
+
+While supporting ad-hoc CLJ scripts in this way provides users with a
+great deal of flexibility in building out dynamic Gemini applications
+in Clojure, it is certainly not the most secure approach in the world.
+Keep in mind that all CLJ scripts run with the same permissions as the
+server process, so server administrators are encouraged to run Space
+Age as an unprivileged user whenever it is deployed within a
+multi-user context.
+
 ** Handling MIME Types
 
 Every time a file is sent to the client, the Gemini protocol requires

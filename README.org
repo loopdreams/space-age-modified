@@ -157,23 +157,74 @@ within these languages' respective standard libaries. You may also
 load namespaces from any other libraries included in the :deps map
 within the server's toplevel deps.edn file.
 
-If any query params were passed as part of the request URL, they can
-be accessed in a Clojure map stored in a namespace-global variable
-called "request-params".
+For your script to do anything useful, it must define a "main"
+function, which receives a request map as its sole input and should
+return a response map as its sole output.
 
-Anything that your script writes to standard out (e.g., using "print"
-or "println") will be collected and returned to the client as the
-contents of a text/gemini document (metadata: 20 text/gemini;
-charset=utf-8). Please refer to the [[Gemtext Markup]] section below for
-details on this syntax.
+The form of these maps is as follows:
 
-While supporting ad-hoc CLJ scripts in this way provides users with a
-great deal of flexibility in building out dynamic Gemini applications
-in Clojure, it is certainly not the most secure approach in the world.
-Keep in mind that all CLJ scripts run with the same permissions as the
-server process, so server administrators are encouraged to run Space
-Age as an unprivileged user whenever it is deployed within a
-multi-user context.
+*** Request
+|--------+-----------------------------------------------------------------------|
+| Key    | Example Value                                                         |
+|--------+-----------------------------------------------------------------------|
+| uri    | "gemini://localhost/~someuser/buzz.clj?Up%2C%20up%2C%20and%20away%21" |
+| scheme | "gemini"                                                              |
+| host   | "localhost"                                                           |
+| port   | 1965                                                                  |
+| path   | "/~someuser/buzz.clj"                                                 |
+| query  | "Up%2C%20up%2C%20and%20away%21"                                       |
+| params | ["Up, up, and away!"]                                                 |
+|--------+-----------------------------------------------------------------------|
+
+*** Response (Input)
+|---------+---------------------|
+| Key     | Example Value       |
+|---------+---------------------|
+| :status | 10                  |
+| :meta   | "Enter coordinates" |
+|---------+---------------------|
+
+*** Response (Success)
+|---------+------------------------------------------------|
+| Key     | Example Value                                  |
+|---------+------------------------------------------------|
+| :status | 20                                             |
+| :meta   | "text/gemini; charset=utf-8"                   |
+| :body   | "# Space TODOs\n\n* Explore\n* Hack\n* Profit! |
+|---------+------------------------------------------------|
+
+*** Response (Redirect)
+|---------+---------------------------------------------------|
+| Key     | Example Value                                     |
+|---------+---------------------------------------------------|
+| :status | 30                                                |
+| :meta   | "gemini://localhost/~someuser/distant-galaxy.clj" |
+|---------+---------------------------------------------------|
+
+*** Response (Temporary Failure)
+|---------+--------------------------|
+| Key     | Example Value            |
+|---------+--------------------------|
+| :status | 40                       |
+| :meta   | "Danger, Will Robinson!" |
+|---------+--------------------------|
+
+*** Response (Permanent Failure)
+|---------+-------------------------------------|
+| Key     | Example Value                       |
+|---------+-------------------------------------|
+| :status | 50                                  |
+| :meta   | "Warning! System Failure Detected!" |
+|---------+-------------------------------------|
+
+*NOTE:* While supporting ad-hoc CLJ scripts in this way provides users
+        with a great deal of flexibility in building out dynamic
+        Gemini applications in Clojure, it is certainly not the most
+        secure approach in the world. Keep in mind that all CLJ
+        scripts run with the same permissions as the server process,
+        so server administrators are encouraged to run Space Age as an
+        unprivileged user whenever it is deployed within a multi-user
+        context.
 
 ** Handling MIME Types
 
@@ -188,8 +239,8 @@ extensions that are not included in this file, you can simply add them
 to it and restart the server for the changes to take effect.
 
 *NOTE:* If the file extension cannot be detected (or the file has no
-extension), the Gemini server will fall back to use
-"application/octet-stream" as the default mime-type.
+        extension), the Gemini server will fall back to use
+        "application/octet-stream" as the default mime-type.
 
 ** Gemtext Markup
 

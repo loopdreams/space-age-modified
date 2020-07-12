@@ -5,24 +5,31 @@
             [space-age.mime-types :refer [get-extension get-mime-type]]))
 
 (defn input-response [prompt]
-  (str "10 " prompt "\r\n"))
+  {:status 10
+   :meta   prompt})
 
 ;; body can be either a string or a java.io.File
 (defn success-response [type body]
-  [(str "20 " type "\r\n") body])
+  {:status 20
+   :meta   type
+   :body   body})
 
 (defn redirect-response [uri]
-  (str "30 " uri "\r\n"))
+  {:status 30
+   :meta   uri})
 
 (defn temporary-failure-response [msg]
-  (str "40 " msg "\r\n"))
+  {:status 40
+   :meta   msg})
 
 (defn permanent-failure-response [msg]
-  (str "50 " msg "\r\n"))
+  {:status 50
+   :meta   msg})
 
 ;; FIXME: Implement client certificates
 (defn client-certificate-required-response [msg]
-  (str "60 " msg "\r\n"))
+  {:status 60
+   :meta   msg})
 
 (defn make-directory-listing [path ^File directory]
   (let [dir-name  (last (remove str/blank? (str/split path #"/")))
@@ -83,4 +90,5 @@
             (permanent-failure-response "File exists but is not readable.")
             (permanent-failure-response "File not found.")))))
     (catch Exception e
-      (temporary-failure-response (str "Error processing request: " (.getMessage e))))))
+      (temporary-failure-response
+       (str "Error processing request: " (.getMessage e))))))

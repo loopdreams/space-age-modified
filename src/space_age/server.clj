@@ -2,35 +2,26 @@
   (:import (javax.net.ssl SSLServerSocket SSLServerSocketFactory))
   (:require [clojure.java.io :as io]
             [space-age.logging :refer [log]]
-            [space-age.handler :refer [gemini-handler]]
+            [space-age.handler :refer [parse-uri gemini-handler]]
             [space-age.mime-types :refer [load-mime-types!]]))
 
 (defonce server-running? (atom false))
 
+;; FIXME: Activate SNI extension
 (defn create-ssl-socket [port]
   (.createServerSocket (SSLServerSocketFactory/getDefault) port))
 
 (defn read-socket [socket]
-  (.readLine (io/reader socket)))
+  (parse-uri (.readLine (io/reader socket))))
 
-(defn write-socket [socket data]
-  (if (string? data)
-    (doto (io/writer socket)
-      (.write data)
-      (.flush))
-    (let [[type body] data]
-      (if (string? body)
-        (doto (io/writer socket)
-          (.write type)
-          (.write body)
-          (.flush))
-        (with-open [in-stream  (io/input-stream body)
-                    out-stream (io/output-stream socket)]
-          (doto (io/writer socket)
-            (.write type)
-            (.flush))
-          (.transferTo in-stream out-stream)
-          (.flush out-stream))))))
+(defn write-socket [socket {:keys [status meta body]}]
+  (doto (io/writer socket)
+    (.write (str status " " meta "\r\n"))
+    (.flush))
+  (with-open [in-stream  (io/input-stream (if (string? body) (.getBytes body) body))
+              out-stream (io/output-stream socket)]
+    (.transferTo in-stream out-stream)
+    (.flush out-stream)))
 
 (defn start-server! [& [document-root port]]
   (let [port (cond

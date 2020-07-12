@@ -2,7 +2,8 @@
   (:import (javax.net.ssl SSLServerSocket SSLServerSocketFactory))
   (:require [clojure.java.io :as io]
             [space-age.logging :refer [log]]
-            [space-age.handler :refer [parse-uri gemini-handler]]
+            [space-age.requests :refer [parse-uri]]
+            [space-age.handler :refer [gemini-handler]]
             [space-age.mime-types :refer [load-mime-types!]]))
 
 (defonce server-running? (atom false))

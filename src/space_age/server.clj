@@ -19,10 +19,11 @@
   (doto (io/writer socket)
     (.write (str status " " meta "\r\n"))
     (.flush))
-  (with-open [in-stream  (io/input-stream (if (string? body) (.getBytes body) body))
-              out-stream (io/output-stream socket)]
-    (.transferTo in-stream out-stream)
-    (.flush out-stream)))
+  (when body
+    (with-open [in-stream  (io/input-stream (if (string? body) (.getBytes body) body))
+                out-stream (io/output-stream socket)]
+      (.transferTo in-stream out-stream)
+      (.flush out-stream))))
 
 (defn start-server! [& [document-root port]]
   (let [port (cond

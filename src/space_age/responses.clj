@@ -25,24 +25,24 @@
   (str "60 " msg "\r\n"))
 
 (defn make-directory-listing [path ^File directory]
-  (let [dir-name (last (remove str/blank? (str/split path #"/")))
-        path     (cond
-                   (str/blank? path)         ""
-                   (str/ends-with? path "/") path
-                   :else                     (str path "/"))]
+  (let [dir-name  (last (remove str/blank? (str/split path #"/")))
+        dir-label (str/replace (str "/" path "/") #"/+" "/")]
     (->> (.listFiles directory)
          (map #(str "=> " dir-name "/" (.getName %) " " (.getName %)))
          (sort)
          (str/join "\n")
-         (str "Directory Listing: /" path "\n\n"))))
+         (str "Directory Listing: " dir-label "\n\n"))))
 
 (defn path->file [document-root path]
-  (if-let [[_ user file-path] (re-find #"^~([^/]+)/?(.*)$" path)]
-    (let [user-home (str/replace (System/getenv "HOME")
-                                 (System/getenv "USER")
-                                 user)]
-      (io/file user-home "public_gemini" file-path))
-    (io/file document-root path)))
+  (let [path (if (str/starts-with? path "/") (subs path 1) path)]
+    (if-let [[_ user file-path] (re-find #"^~([^/]+)/?(.*)$" path)]
+      (let [env-home  (System/getenv "HOME")
+            env-user  (System/getenv "USER")
+            user-home (if (and env-home env-user)
+                        (str/replace env-home env-user user)
+                        (str "/home/" user))]
+        (io/file user-home "public_gemini" file-path))
+      (io/file document-root path))))
 
 (defn run-clj-script [^File file params]
   (try

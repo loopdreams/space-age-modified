@@ -2,11 +2,10 @@
   (:import java.net.URI)
   (:require [clojure.string :as str]))
 
-;; FIXME: Do we expect kv pairs using Gemini?
 (defn parse-query [query]
   (if (str/blank? query)
-    {}
-    (apply hash-map (str/split query #"&|="))))
+    []
+    (str/split query #"&")))
 
 (defn parse-uri [uri]
   (try
@@ -16,6 +15,6 @@
        :host   (str/lower-case (.getHost uri-obj))
        :port   (if (pos? (.getPort uri-obj)) (.getPort uri-obj) 1965)
        :path   (.getPath uri-obj)
+       :query  (.getRawQuery uri-obj)
        :params (parse-query (.getQuery uri-obj))})
     (catch Exception e {:uri uri :parse-error? true})))
-

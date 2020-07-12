@@ -24,25 +24,25 @@
 (defn client-certificate-required-response [msg]
   (str "60 " msg "\r\n"))
 
-(defn make-directory-listing [route ^File directory]
-  (let [dir-name (last (remove str/blank? (str/split route #"/")))
-        route (cond
-                (str/blank? route)         ""
-                (str/ends-with? route "/") route
-                :else                      (str route "/"))]
+(defn make-directory-listing [path ^File directory]
+  (let [dir-name (last (remove str/blank? (str/split path #"/")))
+        path     (cond
+                   (str/blank? path)         ""
+                   (str/ends-with? path "/") path
+                   :else                     (str path "/"))]
     (->> (.listFiles directory)
          (map #(str "=> " dir-name "/" (.getName %) " " (.getName %)))
          (sort)
          (str/join "\n")
-         (str "Directory Listing: /" route "\n\n"))))
+         (str "Directory Listing: /" path "\n\n"))))
 
-(defn route->file [document-root route]
-  (if-let [[_ user file-path] (re-find #"^~([^/]+)/?(.*)$" route)]
+(defn path->file [document-root path]
+  (if-let [[_ user file-path] (re-find #"^~([^/]+)/?(.*)$" path)]
     (let [user-home (str/replace (System/getenv "HOME")
                                  (System/getenv "USER")
                                  user)]
       (io/file user-home "public_gemini" file-path))
-    (io/file document-root route)))
+    (io/file document-root path)))
 
 (defn run-clj-script [^File file params]
   (try
@@ -58,10 +58,13 @@
 ;; Currently we serve up any readable file under a user's home
 ;; directory or the document-root directory. If a directory is
 ;; requested, we serve up its index.gmi or index.gemini if available.
-;; Otherwise, we make a directory listing of links.
-(defn process-request [document-root {:keys [route params]}]
+;; Otherwise, we make a directory listing of links. If an executable
+;; *.clj file is requested, it is run in its own temporary namespace,
+;; and anything printed to standard output is returned as the body of
+;; a text/gemini response.
+(defn process-request [document-root {:keys [path params]}]
   (try
-    (let [file (route->file document-root route)]
+    (let [file (path->file document-root path)]
       (if (and (.isFile file) (.canRead file))
         (let [filename (.getName file)]
           (if (and (= "clj" (get-extension filename))
@@ -75,7 +78,7 @@
                                    (first))]
             (success-response (get-mime-type (.getName index-file)) index-file)
             (success-response (get-mime-type "directory.gmi")
-                              (make-directory-listing route file)))
+                              (make-directory-listing path file)))
           (if (.exists file)
             (permanent-failure-response "File exists but is not readable.")
             (permanent-failure-response "File not found.")))))

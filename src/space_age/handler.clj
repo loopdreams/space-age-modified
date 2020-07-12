@@ -17,6 +17,18 @@
          (str/join "\n")
          (str "Directory Listing: " dir-label "\n\n"))))
 
+(defn run-clj-script [^File file request]
+  (let [script-ns-name (gensym "script")]
+    (try
+      (binding [*ns* (create-ns script-ns-name)]
+        (refer-clojure)
+        (intern *ns* '*gemini-request* request)
+        (let [script-output (with-out-str (load-file (.getPath file)))]
+          (success-response (get-mime-type "script.gmi") script-output)))
+      (catch Exception e
+        (permanent-failure-response (str "Script error: " (.getMessage e))))
+      (finally (remove-ns script-ns-name)))))
+
 (defn path->file [document-root path]
   (let [path (if (str/starts-with? path "/") (subs path 1) path)]
     (if-let [[_ user file-path] (re-find #"^~([^/]+)/?(.*)$" path)]
@@ -28,17 +40,6 @@
         (io/file user-home "public_gemini" file-path))
       (io/file document-root path))))
 
-(defn run-clj-script [^File file params]
-  (try
-    (binding [*ns* (create-ns (gensym "script"))]
-      (refer-clojure)
-      (intern *ns* 'request-params params)
-      (let [script-output (with-out-str (load-file (.getPath file)))]
-        (success-response (get-mime-type "script.gmi") script-output)))
-    (catch Exception e
-      (.printStackTrace e)
-      (permanent-failure-response (str "Script error: " (.getMessage e))))))
-
 ;; Currently we serve up any readable file under a user's home
 ;; directory or the document-root directory. If a directory is
 ;; requested, we serve up its index.gmi or index.gemini if available.
@@ -46,14 +47,14 @@
 ;; *.clj file is requested, it is run in its own temporary namespace,
 ;; and anything printed to standard output is returned as the body of
 ;; a text/gemini response.
-(defn process-request [document-root {:keys [path params]}]
+(defn process-request [document-root {:keys [path] :as request}]
   (try
     (let [file (path->file document-root path)]
       (if (and (.isFile file) (.canRead file))
         (let [filename (.getName file)]
           (if (and (= "clj" (get-extension filename))
                    (.canExecute file))
-            (run-clj-script file params)
+            (run-clj-script file request)
             (success-response (get-mime-type filename) file)))
         (if (and (.isDirectory file) (.canRead file))
           (if-let [index-file (->> ["index.gmi" "index.gemini"]

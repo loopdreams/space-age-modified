@@ -5,6 +5,7 @@
             [space-age.logging :refer [log]]
             [space-age.mime-types :refer [get-extension get-mime-type]]
             [space-age.responses :refer [success-response
+                                         redirect-response
                                          temporary-failure-response
                                          permanent-failure-response]]))
 
@@ -33,24 +34,21 @@
       (finally (remove-ns script-ns-name)))))
 
 (defn make-directory-listing [path ^File directory]
-  (let [dir-name  (last (remove str/blank? (str/split path #"/")))
-        dir-label (str/replace (str "/" path "/") #"/+" "/")]
-    (->> (.listFiles directory)
-         (map #(str "=> " dir-name "/" (.getName %) " " (.getName %)))
-         (sort)
-         (str/join "\n")
-         (str "Directory Listing: " dir-label "\n\n"))))
+  (->> (.listFiles directory)
+       (map #(str "=> " (.getName %) (when (.isDirectory %) "/")))
+       (sort)
+       (str/join "\n")
+       (str "Directory Listing: " path "\n\n")))
 
 (defn path->file [document-root path]
-  (let [path (if (str/starts-with? path "/") (subs path 1) path)]
-    (if-let [[_ user file-path] (re-find #"^~([^/]+)/?(.*)$" path)]
-      (let [env-home  (System/getenv "HOME")
-            env-user  (System/getenv "USER")
-            user-home (if (and env-home env-user)
-                        (str/replace env-home env-user user)
-                        (str "/home/" user))]
-        (io/file user-home "public_gemini" file-path))
-      (io/file document-root path))))
+  (if-let [[_ user file-path] (re-find #"^/~([^/]+)/?(.*)$" path)]
+    (let [env-home  (System/getenv "HOME")
+          env-user  (System/getenv "USER")
+          user-home (if (and env-home env-user)
+                      (str/replace env-home env-user user)
+                      (str "/home/" user))]
+      (io/file user-home "public_gemini" file-path))
+    (io/file document-root (subs path 1))))
 
 ;; Currently we serve up any readable file under a user's home
 ;; directory or the document-root directory. If a directory is
@@ -60,39 +58,45 @@
 ;; namespace and its "main" function (if any) is run. If the return
 ;; value is a valid Gemini response, it is returned to the client.
 ;; Otherwise, an error response is returned.
-(defn process-request [document-root {:keys [path] :as request}]
+(defn process-request [document-root {:keys [path query] :as request}]
   (try
     (let [file (path->file document-root path)]
       (if (and (.isFile file) (.canRead file))
         (let [filename (.getName file)]
-          (if (and (= "clj" (get-extension filename))
-                   (.canExecute file))
+          (if (and (= "clj" (get-extension filename)) (.canExecute file))
             (run-clj-script file request)
             (success-response (get-mime-type filename) file)))
         (if (and (.isDirectory file) (.canRead file))
-          (if-let [index-file (->> ["index.gmi" "index.gemini"]
-                                   (map #(io/file file %))
-                                   (filter #(and (.isFile %) (.canRead %)))
-                                   (first))]
-            (success-response (get-mime-type (.getName index-file)) index-file)
-            (success-response (get-mime-type "directory.gmi")
-                              (make-directory-listing path file)))
+          (if-not (str/ends-with? path "/")
+            (redirect-response (if (str/blank? query) (str path "/") (str path "/?" query)))
+            (if-let [index-file (->> ["index.gmi" "index.gemini"]
+                                     (map #(io/file file %))
+                                     (filter #(and (.isFile %) (.canRead %)))
+                                     (first))]
+              (success-response (get-mime-type (.getName index-file)) index-file)
+              (success-response (get-mime-type "directory.gmi")
+                                (make-directory-listing path file))))
           (if (.exists file)
             (permanent-failure-response "File exists but is not readable.")
             (permanent-failure-response "File not found.")))))
     (catch Exception e
-      (temporary-failure-response
-       (str "Error processing request: " (.getMessage e))))))
+      (temporary-failure-response (str "Error processing request: " (.getMessage e))))))
 
-;; Example URI: gemini://myhost.org/foo/bar?baz=buzz&boz=bazizzle\r\n
-(defn gemini-handler [document-root request]
-  (log (:uri request))
-  (cond (:parse-error? request)
+;; Example URI: gemini://myhost.org/foo/bar.clj?baz&buzz&bazizzle\r\n
+;; FIXME: Return error if host and port do not match expected values
+(defn gemini-handler [document-root {:keys [uri parse-error? scheme path query] :as request}]
+  (log uri)
+  (cond parse-error?
         (permanent-failure-response "Malformed URI.")
 
-        (not= "gemini" (:scheme request))
-        (permanent-failure-response
-         (str "Protocol \"" (:scheme request) "\" is not supported."))
+        (not= scheme "gemini")
+        (permanent-failure-response (str "Protocol \"" scheme "\" is not supported."))
+
+        (str/blank? path)
+        (redirect-response (if (str/blank? query) "/" (str "/?" query)))
+
+        (str/includes? path "/..")
+        (permanent-failure-response "Paths may not contain /.. elements.")
 
         :else
         (process-request document-root request)))

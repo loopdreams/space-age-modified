@@ -1,5 +1,5 @@
 (ns space-age.server
-  (:import (javax.net.ssl SSLServerSocket SSLServerSocketFactory))
+  (:import (javax.net.ssl SSLServerSocket SSLServerSocketFactory SNIHostName))
   (:require [clojure.java.io :as io]
             [space-age.logging :refer [log]]
             [space-age.requests :refer [parse-uri]]
@@ -8,9 +8,12 @@
 
 (defonce server-running? (atom false))
 
-;; FIXME: Activate SNI extension
 (defn create-ssl-socket [port]
-  (.createServerSocket (SSLServerSocketFactory/getDefault) port))
+  (let [server-socket (.createServerSocket (SSLServerSocketFactory/getDefault) port)
+        ssl-params    (.getSSLParameters server-socket)]
+    (.setServerNames ssl-params [(SNIHostName. (System/getProperty "sni.hostname"))])
+    (.setSSLParameters server-socket ssl-params)
+    server-socket))
 
 (defn read-socket [socket]
   (parse-uri (.readLine (io/reader socket))))
@@ -44,6 +47,9 @@
       (not (.canRead (io/file document-root)))
       (log (str "No read access to document root " document-root "."))
 
+      (nil? (System/getProperty "sni.hostname"))
+      (log "Missing sni.hostname property. Please set this in deps.edn.")
+
       :else
       (do
         (log (str "Starting server on port " port "."))
@@ -51,6 +57,7 @@
         (reset! server-running? true)
         (future
           (with-open [^SSLServerSocket server-socket (create-ssl-socket port)]
+            (log "SNIServerNames:" (.getServerNames (.getSSLParameters server-socket)))
             (while @server-running?
               (try
                 (with-open [socket (.accept server-socket)]

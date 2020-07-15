@@ -1,5 +1,6 @@
 {:paths   ["src" "resources"]
  :deps    {org.clojure/clojure {:mvn/version "1.10.1"}}
  :aliases {:run-server {:jvm-opts  ["-Djavax.net.ssl.keyStore=resources/keystore.jks"
-                                    "-Djavax.net.ssl.keyStorePassword=moonshot"]
+                                    "-Djavax.net.ssl.keyStorePassword=moonshot"
+                                    "-Dsni.hostname=localhost"]
                         :main-opts ["-m" "space-age.server"]}}}

@@ -39,7 +39,7 @@ earlier) to generate a 2048 bit RSA key pair and self-signed
 certificate (SHA256withRSA) with a validity of 365 days:
 
 #+begin_src sh
-$ keytool -genkey -keyalg RSA -alias selfsigned -keystore resources/keystore.jks -storepass moonshot -validity 365 -keysize 2048
+$ keytool -genkey -keyalg RSA -keysize 2048 -alias selfsigned -validity 365 -keystore resources/keystore.jks -storepass moonshot
 #+end_src
 
 When run from this repository's toplevel directory, this command will
@@ -49,8 +49,7 @@ or to be located somewhere else, just change the keytool arguments
 accordingly.
 
 *NOTE:* When prompted by the command, you should fill in the Common
-        Name field with your site's domain name (e.g.,
-        www.foobar.org).
+        Name field with your site's domain name (e.g., foobar.org).
 
 Finally, you will need to update the toplevel deps.edn file with the
 correct name and password for your generated certificate file if you

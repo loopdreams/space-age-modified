@@ -22,7 +22,6 @@
   {:status 50
    :meta   msg})
 
-;; FIXME: Implement client certificates
 (defn client-certificate-required-response [msg]
   {:status 60
    :meta   msg})

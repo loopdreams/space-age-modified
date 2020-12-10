@@ -84,6 +84,7 @@
 
 ;; Example URI: gemini://myhost.org/foo/bar.clj?baz&buzz&bazizzle\r\n
 ;; FIXME: Return error if host and port do not match expected values
+;; FIXME: If scheme is empty, return "59 Bad Request\r\n"
 (defn gemini-handler [document-root {:keys [uri parse-error? scheme path query] :as request}]
   (log uri)
   (cond parse-error?
@@ -91,9 +92,6 @@
 
         (not= scheme "gemini")
         (permanent-failure-response (str "Protocol \"" scheme "\" is not supported."))
-
-        (str/blank? path)
-        (redirect-response (if (str/blank? query) "/" (str "/?" query)))
 
         (str/includes? path "/..")
         (permanent-failure-response "Paths may not contain /.. elements.")

@@ -35,9 +35,9 @@
 
 (defn make-directory-listing [path ^File directory]
   (->> (.listFiles directory)
-       (map #(str "=> " (.getName %) (when (.isDirectory %) "/")))
+       (map #(str "=> " (.getName %) (when (.isDirectory %) "/") "\n"))
        (sort)
-       (str/join "\n")
+       (str/join)
        (str "Directory Listing: " path "\n\n")))
 
 (defn path->file [document-root path]

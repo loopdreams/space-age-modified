@@ -58,7 +58,7 @@
 ;; namespace and its "main" function (if any) is run. If the return
 ;; value is a valid Gemini response, it is returned to the client.
 ;; Otherwise, an error response is returned.
-(defn process-request [document-root {:keys [path query] :as request}]
+(defn process-request [document-root {:keys [path raw-path raw-query raw-fragment] :as request}]
   (try
     (let [file (path->file document-root path)]
       (if (and (.isFile file) (.canRead file))
@@ -68,7 +68,7 @@
             (success-response (get-mime-type filename) file)))
         (if (and (.isDirectory file) (.canRead file))
           (if-not (str/ends-with? path "/")
-            (redirect-response (if (str/blank? query) (str path "/") (str path "/?" query)))
+            (redirect-response (str raw-path "/" (when raw-query "?") raw-query (when raw-fragment "#") raw-fragment))
             (if-let [index-file (->> ["index.gmi" "index.gemini"]
                                      (map #(io/file file %))
                                      (filter #(and (.isFile %) (.canRead %)))
@@ -85,7 +85,7 @@
 ;; Example URI: gemini://myhost.org/foo/bar.clj?baz&buzz&bazizzle\r\n
 ;; FIXME: Return error if host and port do not match expected values
 ;; FIXME: If scheme is empty, return "59 Bad Request\r\n"
-(defn gemini-handler [document-root {:keys [uri parse-error? scheme path query] :as request}]
+(defn gemini-handler [document-root {:keys [uri parse-error? scheme path] :as request}]
   (log uri)
   (cond parse-error?
         (permanent-failure-response "Malformed URI.")

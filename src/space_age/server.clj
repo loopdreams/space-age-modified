@@ -16,10 +16,11 @@
       (.setSSLParameters (doto (.getSSLParameters server-socket)
                            (.setWantClientAuth true))))))
 
-(defn- read-socket [^SSLSocket socket]
+;; FIXME: Extract client cert if one is provided: (.getSession ^SSLSocket socket)
+(defn- read-socket! [^SSLSocket socket]
   (parse-uri (.readLine (io/reader socket))))
 
-(defn- write-socket [^SSLSocket socket {:keys [status meta body]}]
+(defn- write-socket! [^SSLSocket socket {:keys [status meta body]}]
   (doto (io/writer socket)
     (.write (str status " " meta "\r\n"))
     (.flush))
@@ -31,15 +32,14 @@
   (.shutdownOutput socket))
 
 ;; FIXME: Only accept connections passing an SNI HostName that matches (System/getProperty "sni.hostname")
-;; FIXME: Extract client cert if one is provided: (.getSession ^SSLSocket socket)
 (defn- accept-connections! [^SSLServerSocket server-socket document-root]
   (while @global-server-thread
     (try
       (let [socket (.accept server-socket)]
         (try
-          (->> (read-socket socket)
+          (->> (read-socket! socket)
                (gemini-handler document-root)
-               (write-socket socket))
+               (write-socket! socket))
           (catch Exception e
             (log "Server error:" e))
           (finally (.close socket))))
@@ -114,11 +114,13 @@
                         (The Clojurian's Gemini Server)
 ")
 
+;; FIXME: Use clojure.tools.cli/parse-opts to provide actual command line switches
 (defn -main [& [document-root port]]
-  (println program-banner)
-  (if-let [error-msg (check-inputs document-root port)]
-    (log error-msg)
-    (do
-      (start-server! document-root (get-int-port port))
-      (deref @global-server-thread)))
-  (shutdown-agents))
+  (when-not @global-server-thread ; Prevents server freezing attacks from user scripts
+    (println program-banner)
+    (if-let [error-msg (check-inputs document-root port)]
+      (log error-msg)
+      (do
+        (start-server! document-root (get-int-port port))
+        (deref @global-server-thread)))
+    (shutdown-agents)))

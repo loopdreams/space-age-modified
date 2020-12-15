@@ -1,3 +1,4 @@
+;; FIXME: Harden this namespace by making all def'ed symbols private if possible
 (ns space-age.handler
   (:import java.io.File)
   (:require [clojure.string :as str]
@@ -17,6 +18,7 @@
            (string? (:body response))
            (instance? File (:body response)))))
 
+;; FIXME: Reject any scripts containing calls to these functions: (ns in-ns remove-ns shutdown-agents System/exit load-mime-types!)
 (defn run-clj-script [^File file request]
   (let [script-ns-name (gensym "script")]
     (try
@@ -83,7 +85,7 @@
       (temporary-failure-response (str "Error processing request: " (.getMessage e))))))
 
 ;; Example URI: gemini://myhost.org/foo/bar.clj?baz&buzz&bazizzle\r\n
-;; FIXME: Return error if host and port do not match expected values
+;; FIXME: Return status code 53 if host and port do not match expected values for this server
 ;; FIXME: If scheme is empty, return "59 Bad Request\r\n"
 (defn gemini-handler [document-root {:keys [uri parse-error? scheme path] :as request}]
   (log uri)

@@ -3,9 +3,9 @@
            java.util.Date)
   (:require [clojure.string :as str]))
 
-(defonce synchronized-log-writer (agent nil))
+(defonce ^:private synchronized-log-writer (agent nil))
 
-(defn truncate [s max-length]
+(defn- truncate [s max-length]
   (if (> (count s) max-length)
     (subs s 0 max-length)
     s))

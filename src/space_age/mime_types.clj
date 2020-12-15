@@ -2,7 +2,7 @@
   (:require [clojure.string :as str]
             [clojure.java.io :as io]))
 
-(defonce mime-types (atom {}))
+(defonce ^:private mime-types (atom {}))
 
 (defn load-mime-types! []
   (reset! mime-types

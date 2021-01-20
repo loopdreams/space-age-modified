@@ -66,7 +66,7 @@ To launch the Gemini server, simply navigate to the repository's
 toplevel directory and run this command:
 
 #+begin_src sh
-$ clojure -A:run-server /my/document/root/directory
+$ clojure -M:run-server /my/document/root/directory
 #+end_src
 
 This will start the server on port 1965 and will use
@@ -86,14 +86,14 @@ file of your choosing. On a Unix system, this can be accomplished like
 so:
 
 #+begin_src sh
-$ clojure -A:run-server /my/document/root/directory &> some_file.log
+$ clojure -M:run-server /my/document/root/directory &> some_file.log
 #+end_src
 
 If you would like to run the server on a different port, you can
 specify that as the second argument to the run-server alias like so:
 
 #+begin_src sh
-$ clojure -A:run-server /my/document/root/directory 31337
+$ clojure -M:run-server /my/document/root/directory 31337
 #+end_src
 
 ** Mapping Routes to the Filesystem

@@ -163,17 +163,19 @@ return a response map as its sole output.
 The form of these maps is as follows:
 
 *** Request
-|--------+-----------------------------------------------------------------------|
-| Key    | Example Value                                                         |
-|--------+-----------------------------------------------------------------------|
-| uri    | "gemini://localhost/~someuser/buzz.clj?Up%2C%20up%2C%20and%20away%21" |
-| scheme | "gemini"                                                              |
-| host   | "localhost"                                                           |
-| port   | 1965                                                                  |
-| path   | "/~someuser/buzz.clj"                                                 |
-| query  | "Up%2C%20up%2C%20and%20away%21"                                       |
-| params | ["Up, up, and away!"]                                                 |
-|--------+-----------------------------------------------------------------------|
+|-----------+-----------------------------------------------------------------------|
+| Key       | Example Value                                                         |
+|-----------+-----------------------------------------------------------------------|
+| uri       | "gemini://localhost/~someuser/buzz.clj?Up%2C%20up%2C%20and%20away%21" |
+| scheme    | "gemini"                                                              |
+| host      | "localhost"                                                           |
+| port      | 1965                                                                  |
+| raw-path  | "/~someuser/buzz.clj"                                                 |
+| path      | "/~someuser/buzz.clj"                                                 |
+| raw-query | "Up%2C%20up%2C%20and%20away%21"                                       |
+| query     | "Up, up, and away!"                                                   |
+| params    | ["Up, up, and away!"]                                                 |
+|-----------+-----------------------------------------------------------------------|
 
 *** Response (Input)
 |---------+---------------------|
@@ -266,7 +268,7 @@ bootstrapped by visiting the Project Gemini capsule via web proxy:
 
 ** License and Distribution
 
-Copyright © 2020 Gary W. Johnson <lambdatronic@disroot.org>
+Copyright © 2020-2021 Gary W. Johnson <lambdatronic@disroot.org>
 
 This software is distributed under the terms of the Eclipse Public
 License version 2.0 (or at the recipient's discretion, any later

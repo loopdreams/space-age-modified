@@ -6,13 +6,15 @@
             [space-age.logging :refer [log]]
             [space-age.mime-types :refer [get-extension get-mime-type]]
             [space-age.responses :refer [success-response
-                                         redirect-response
+                                         permanent-redirect-response
                                          temporary-failure-response
                                          permanent-failure-response]]))
 
+(def valid-status-codes #{10 11 20 30 31 40 41 42 43 44 50 51 52 53 59 60 61 62})
+
 (defn valid-response? [response]
   (and (map? response)
-       (contains? #{10 20 30 40 50 60} (:status response))
+       (contains? valid-status-codes (:status response))
        (string? (:meta response))
        (or (nil? (:body response))
            (string? (:body response))
@@ -70,7 +72,9 @@
             (success-response (get-mime-type filename) file)))
         (if (and (.isDirectory file) (.canRead file))
           (if-not (str/ends-with? path "/")
-            (redirect-response (str raw-path "/" (when raw-query "?") raw-query (when raw-fragment "#") raw-fragment))
+            (permanent-redirect-response (str raw-path "/"
+                                              (when raw-query "?") raw-query
+                                              (when raw-fragment "#") raw-fragment))
             (if-let [index-file (->> ["index.gmi" "index.gemini"]
                                      (map #(io/file file %))
                                      (filter #(and (.isFile %) (.canRead %)))

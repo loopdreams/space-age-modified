@@ -8,7 +8,10 @@
             [space-age.responses :refer [success-response
                                          permanent-redirect-response
                                          temporary-failure-response
-                                         permanent-failure-response]]))
+                                         cgi-error-response
+                                         permanent-failure-response
+                                         not-found-response
+                                         bad-request-response]]))
 
 (def valid-status-codes #{10 11 20 30 31 40 41 42 43 44 50 51 52 53 59 60 61 62})
 
@@ -31,10 +34,10 @@
           (let [response (main-fn request)]
             (if (valid-response? response)
               response
-              (permanent-failure-response "Script error: Invalid response.")))
-          (permanent-failure-response "Script error: No main function.")))
+              (cgi-error-response "Script error: Malformed response.")))
+          (cgi-error-response "Script error: No main function.")))
       (catch Exception e
-        (permanent-failure-response (str "Script error: " (.getMessage e))))
+        (cgi-error-response (str "Script error: " (.getMessage e))))
       (finally (remove-ns script-ns-name)))))
 
 (defn make-directory-listing [path ^File directory]
@@ -84,23 +87,22 @@
                                 (make-directory-listing path file))))
           (if (.exists file)
             (permanent-failure-response "File exists but is not readable.")
-            (permanent-failure-response "File not found.")))))
+            (not-found-response "File not found.")))))
     (catch Exception e
       (temporary-failure-response (str "Error processing request: " (.getMessage e))))))
 
 ;; Example URI: gemini://myhost.org/foo/bar.clj?baz&buzz&bazizzle\r\n
 ;; FIXME: Return status code 53 if host and port do not match expected values for this server
-;; FIXME: If scheme is empty, return "59 Bad Request\r\n"
 (defn gemini-handler [document-root {:keys [uri parse-error? scheme path] :as request}]
   (log uri)
   (cond parse-error?
-        (permanent-failure-response "Malformed URI.")
+        (bad-request-response "Malformed URI.")
 
         (not= scheme "gemini")
-        (permanent-failure-response (str "Protocol \"" scheme "\" is not supported."))
+        (bad-request-response (str "Protocol \"" scheme "\" is not supported."))
 
         (str/includes? path "/..")
-        (permanent-failure-response "Paths may not contain /.. elements.")
+        (bad-request-response "Paths may not contain /.. elements.")
 
         :else
         (process-request document-root request)))

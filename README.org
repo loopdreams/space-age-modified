@@ -7,9 +7,6 @@ which can be found here:
 
   gemini://gemini.circumlunar.space/docs/specification.gmi
 
-*NOTE:* Client certificates have not yet been implemented but should
-        be soon.
-
 ** Installation Requirements
 
 - [[https://jdk.java.net][Java Development Kit (version 11+)]]

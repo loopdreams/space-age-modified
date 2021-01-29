@@ -1,5 +1,9 @@
 (ns space-age.server
-  (:import (javax.net.ssl SSLSocket SSLServerSocket SSLServerSocketFactory))
+  (:import (java.io FileInputStream)
+           (javax.net.ssl SSLSession SSLContext SSLServerSocket SSLSocket SSLParameters
+                          KeyManagerFactory TrustManager X509TrustManager)
+           (java.security KeyStore SecureRandom MessageDigest)
+           (java.security.cert X509Certificate))
   (:require [clojure.java.io :as io]
             [space-age.logging :refer [log]]
             [space-age.requests :refer [parse-uri]]
@@ -9,16 +13,79 @@
 (defonce ^:private global-server-thread (atom nil))
 (defonce ^:private global-server-socket (atom nil))
 
+;; FIXME: Unused. Remove after implementing SNI.
+(defn- expand-ssl-params [^SSLParameters params]
+  {:algorithm-constraints             (.getAlgorithmConstraints params)
+   :application-protocols             (.getApplicationProtocols params)
+   :cipher-suites                     (.getCipherSuites params)
+   :enable-retransmissions?           (.getEnableRetransmissions params)
+   :endpoint-identification-algorithm (.getEndpointIdentificationAlgorithm params)
+   :maximum-packet-size               (.getMaximumPacketSize params)
+   :need-client-auth?                 (.getNeedClientAuth params)
+   :protocols                         (.getProtocols params)
+   :server-names                      (.getServerNames params)
+   :sni-matchers                      (.getSNIMatchers params)
+   :use-cipher-suites-order?          (.getUseCipherSuitesOrder params)
+   :want-client-auth?                 (.getWantClientAuth params)})
+
+(defn- get-key-store [key-store-file password-chars]
+  (with-open [in (FileInputStream. key-store-file)]
+    (doto (KeyStore/getInstance "JKS")
+      (.load in password-chars))))
+
+(defn- get-key-manager-array []
+  (let [key-store-file      (System/getProperty "javax.net.ssl.keyStore")
+        password            (System/getProperty "javax.net.ssl.keyStorePassword")
+        password-chars      (into-array Character/TYPE password)
+        key-store           (get-key-store key-store-file password-chars)
+        key-manager-factory (doto (KeyManagerFactory/getInstance (KeyManagerFactory/getDefaultAlgorithm))
+                              (.init key-store password-chars))]
+    (.getKeyManagers key-manager-factory)))
+
+(defn- get-trust-manager-array []
+  (into-array TrustManager
+              [(reify X509TrustManager
+                 (getAcceptedIssuers [this] (make-array X509Certificate 0))
+                 (checkClientTrusted [this certs auth-type])
+                 (checkServerTrusted [this certs auth-type]))]))
+
+(defn- get-trusting-ssl-context []
+  (doto (SSLContext/getInstance "TLS")
+    (.init (get-key-manager-array)
+           (get-trust-manager-array)
+           (SecureRandom.))))
+
 (defn- create-ssl-socket [port]
-  (let [server-socket (-> (SSLServerSocketFactory/getDefault)
+  (let [server-socket (-> (get-trusting-ssl-context)
+                          (.getServerSocketFactory)
                           (.createServerSocket port))]
     (doto server-socket
-      (.setSSLParameters (doto (.getSSLParameters server-socket)
-                           (.setWantClientAuth true))))))
+      (.setWantClientAuth true))))
 
-;; FIXME: Extract client cert if one is provided: (.getSession ^SSLSocket socket)
+(defn- sha256-hash [bytes]
+  (as-> (MessageDigest/getInstance "SHA-256") %
+    (.digest % bytes)
+    (BigInteger. 1 %)
+    (.toString % 16)))
+
+(defn- get-client-certificate [^SSLSession session]
+  (when-let [certificate-chain (try (.getPeerCertificates session) (catch Exception _ nil))]
+    (let [^X509Certificate client-cert (first certificate-chain)]
+      {:type                       (.getType client-cert)
+       :version                    (.getVersion client-cert)
+       :serial-number              (.getSerialNumber client-cert)
+       :not-before                 (.getNotBefore client-cert)
+       :not-after                  (.getNotAfter client-cert)
+       :subject-distinguished-name (.getName (.getSubjectX500Principal client-cert))
+       :subject-alternative-names  (seq (.getSubjectAlternativeNames client-cert))
+       :issuer-distinguished-name  (.getName (.getIssuerX500Principal client-cert))
+       :issuer-alternative-names   (seq (.getIssuerAlternativeNames client-cert))
+       :sha256-hash                (sha256-hash (.getEncoded client-cert))})))
+
 (defn- read-socket! [^SSLSocket socket]
-  (parse-uri (.readLine (io/reader socket))))
+  (let [session (.getSession socket)
+        request (parse-uri (.readLine (io/reader socket)))]
+    (assoc request :client-cert (get-client-certificate session))))
 
 (defn- write-socket! [^SSLSocket socket {:keys [status meta body]}]
   (doto (io/writer socket)
@@ -100,7 +167,13 @@
     "The port argument must be a valid integer if specified."
 
     (nil? (System/getProperty "sni.hostname"))
-    "Missing sni.hostname property. Please set this in deps.edn."))
+    "Missing sni.hostname property. Please set this in deps.edn."
+
+    (nil? (System/getProperty "javax.net.ssl.keyStore"))
+    "Missing javax.net.ssl.keyStore property. Please set this in deps.edn."
+
+    (nil? (System/getProperty "javax.net.ssl.keyStorePassword"))
+    "Missing javax.net.ssl.keyStorePassword property. Please set this in deps.edn."))
 
 (def ^:private program-banner "
 :'#####::'#######:::::'##:::::'#####::'#######:::::::'##:::::'#####:::'#######:

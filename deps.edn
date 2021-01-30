@@ -1,6 +1,8 @@
 {:paths   ["src" "resources"]
  :deps    {org.clojure/clojure {:mvn/version "1.10.1"}}
- :aliases {:run-server {:jvm-opts  ["-Djavax.net.ssl.keyStore=resources/keystore.jks"
-                                    "-Djavax.net.ssl.keyStorePassword=moonshot"
-                                    "-Dsni.hostname=localhost"]
-                        :main-opts ["-m" "space-age.server"]}}}
+ :aliases {:run-server       {:jvm-opts  ["-Djavax.net.ssl.keyStore=resources/keystore.jks"
+                                          "-Djavax.net.ssl.keyStorePassword=moonshot"
+                                          "-Dsni.hostname=localhost"]
+                              :main-opts ["-m" "space-age.server"]}
+           :check-reflection {:main-opts ["-e" "(do,(set!,*warn-on-reflection*,true),nil)"
+                                          "-e" "(require,'space-age.server)"]}}}

@@ -42,7 +42,7 @@
 
 (defn make-directory-listing [path ^File directory]
   (->> (.listFiles directory)
-       (map #(str "=> " (.getName %) (when (.isDirectory %) "/") "\n"))
+       (map #(str "=> " (.getName ^File %) (when (.isDirectory ^File %) "/") "\n"))
        (sort)
        (str/join)
        (str "Directory Listing: " path "\n\n")))
@@ -67,7 +67,7 @@
 ;; Otherwise, an error response is returned.
 (defn process-request [document-root {:keys [path raw-path raw-query raw-fragment] :as request}]
   (try
-    (let [file (path->file document-root path)]
+    (let [^File file (path->file document-root path)]
       (if (and (.isFile file) (.canRead file))
         (let [filename (.getName file)]
           (if (and (= "clj" (get-extension filename)) (.canExecute file))
@@ -78,10 +78,10 @@
             (permanent-redirect-response (str raw-path "/"
                                               (when raw-query "?") raw-query
                                               (when raw-fragment "#") raw-fragment))
-            (if-let [index-file (->> ["index.gmi" "index.gemini"]
-                                     (map #(io/file file %))
-                                     (filter #(and (.isFile %) (.canRead %)))
-                                     (first))]
+            (if-let [^File index-file (->> ["index.gmi" "index.gemini"]
+                                           (map #(io/file file %))
+                                           (filter #(and (.isFile ^File %) (.canRead ^File %)))
+                                           (first))]
               (success-response (get-mime-type (.getName index-file)) index-file)
               (success-response (get-mime-type "directory.gmi")
                                 (make-directory-listing path file))))

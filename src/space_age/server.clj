@@ -1,5 +1,5 @@
 (ns space-age.server
-  (:import (java.io FileInputStream)
+  (:import (java.io BufferedReader FileInputStream)
            (javax.net.ssl SSLSession SSLContext SSLServerSocket SSLSocket SSLParameters
                           KeyManagerFactory TrustManager X509TrustManager)
            (java.security KeyStore SecureRandom MessageDigest)
@@ -28,7 +28,7 @@
    :use-cipher-suites-order?          (.getUseCipherSuitesOrder params)
    :want-client-auth?                 (.getWantClientAuth params)})
 
-(defn- get-key-store [key-store-file password-chars]
+(defn- get-key-store [^String key-store-file password-chars]
   (with-open [in (FileInputStream. key-store-file)]
     (doto (KeyStore/getInstance "JKS")
       (.load in password-chars))))
@@ -56,9 +56,10 @@
            (SecureRandom.))))
 
 (defn- create-ssl-socket [port]
-  (let [server-socket (-> (get-trusting-ssl-context)
-                          (.getServerSocketFactory)
-                          (.createServerSocket port))]
+  (let [^SSLContext ssl-context (get-trusting-ssl-context)
+        ^SSLServerSocket server-socket (-> ssl-context
+                                           (.getServerSocketFactory)
+                                           (.createServerSocket port))]
     (doto server-socket
       (.setWantClientAuth true))))
 
@@ -84,7 +85,7 @@
 
 (defn- read-socket! [^SSLSocket socket]
   (let [session (.getSession socket)
-        request (parse-uri (.readLine (io/reader socket)))]
+        request (parse-uri (.readLine ^BufferedReader (io/reader socket)))]
     (assoc request :client-cert (get-client-certificate session))))
 
 (defn- write-socket! [^SSLSocket socket {:keys [status meta body]}]
@@ -92,7 +93,7 @@
     (.write (str status " " meta "\r\n"))
     (.flush))
   (when body
-    (with-open [in-stream (io/input-stream (if (string? body) (.getBytes body) body))]
+    (with-open [in-stream (io/input-stream (if (string? body) (.getBytes ^String body) body))]
       (let [out-stream (io/output-stream socket)]
         (.transferTo in-stream out-stream)
         (.flush out-stream))))
@@ -117,7 +118,7 @@
     (do
       (reset! global-server-thread nil)
       (when @global-server-socket
-        (.close @global-server-socket)
+        (.close ^SSLServerSocket @global-server-socket)
         (reset! global-server-socket nil))
       (log "Server stopped."))
     (log "Server is not running.")))
@@ -131,7 +132,7 @@
       (reset! global-server-thread
               (future
                 (try
-                  (with-open [server-socket (create-ssl-socket port)]
+                  (with-open [^SSLServerSocket server-socket (create-ssl-socket port)]
                     (reset! global-server-socket server-socket)
                     (log (str "Gemini server started on port " port "."))
                     (accept-connections! server-socket document-root))

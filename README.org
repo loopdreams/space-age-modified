@@ -132,7 +132,7 @@ Examples:
 |----------------------------------------------+-------------------------------------------------|
 | URL                                          | Resolved File                                   |
 |----------------------------------------------+-------------------------------------------------|
-| gemini://localhost/~someuser                 | /home/someuser/public_gemini/index.{gmi,gemini} |
+| gemini://localhost/~someuser/                | /home/someuser/public_gemini/index.{gmi,gemini} |
 | gemini://localhost/~someuser/foo.gmi         | /home/someuser/public_gemini/foo.gmi            |
 | gemini://localhost/~someuser/foo/bar/baz.png | /home/someuser/public_gemini/foo/bar/baz.png    |
 |----------------------------------------------+-------------------------------------------------|
@@ -153,6 +153,15 @@ within these languages' respective standard libaries. You may also
 load namespaces from any other libraries included in the :deps map
 within the server's toplevel deps.edn file.
 
+*NOTE:* While supporting ad-hoc CLJ scripts in this way provides users
+        with a great deal of flexibility in building out dynamic
+        Gemini applications in Clojure, it is certainly not the most
+        secure approach in the world. Keep in mind that all CLJ
+        scripts run with the same permissions as the server process,
+        so server administrators are encouraged to run Space Age as an
+        unprivileged user whenever it is deployed within a multi-user
+        context.
+
 For your script to do anything useful, it must define a "main"
 function, which receives a request map as its sole input and should
 return a response map as its sole output.
@@ -160,19 +169,38 @@ return a response map as its sole output.
 The form of these maps is as follows:
 
 *** Request
-|-----------+-----------------------------------------------------------------------|
-| Key       | Example Value                                                         |
-|-----------+-----------------------------------------------------------------------|
-| uri       | "gemini://localhost/~someuser/buzz.clj?Up%2C%20up%2C%20and%20away%21" |
-| scheme    | "gemini"                                                              |
-| host      | "localhost"                                                           |
-| port      | 1965                                                                  |
-| raw-path  | "/~someuser/buzz.clj"                                                 |
-| path      | "/~someuser/buzz.clj"                                                 |
-| raw-query | "Up%2C%20up%2C%20and%20away%21"                                       |
-| query     | "Up, up, and away!"                                                   |
-| params    | ["Up, up, and away!"]                                                 |
-|-----------+-----------------------------------------------------------------------|
+|-------------+-----------------------------------------------------------------------|
+| Key         | Example Value                                                         |
+|-------------+-----------------------------------------------------------------------|
+| uri         | "gemini://localhost/~someuser/buzz.clj?Up%2C%20up%2C%20and%20away%21" |
+| scheme      | "gemini"                                                              |
+| host        | "localhost"                                                           |
+| port        | 1965                                                                  |
+| raw-path    | "/~someuser/buzz.clj"                                                 |
+| path        | "/~someuser/buzz.clj"                                                 |
+| raw-query   | "Up%2C%20up%2C%20and%20away%21"                                       |
+| query       | "Up, up, and away!"                                                   |
+| params      | ["Up, up, and away!"]                                                 |
+| client-cert | a map (see below) or nil if no cert has been provided                 |
+|-------------+-----------------------------------------------------------------------|
+
+*** Client Cert
+|----------------------------+--------------------------------------------------------------------|
+| Key                        | Example Value                                                      |
+|----------------------------+--------------------------------------------------------------------|
+| type                       | "X.509"                                                            |
+| version                    | 3                                                                  |
+| serial-number              | 687042568997699610239641669485459343721194177426                   |
+| not-before                 | #inst "2020-06-24T21:51:53.000-00:00"                              |
+| not-after                  | #inst "2120-05-31T21:51:53.000-00:00"                              |
+| subject-common-name        | "lambdatronic"                                                     |
+| subject-distinguished-name | "CN=lambdatronic"                                                  |
+| subject-alternative-names  | nil                                                                |
+| issuer-common-name         | "lambdatronic"                                                     |
+| issuer-distinguished-name  | "CN=lambdatronic"                                                  |
+| issuer-alternative-names   | nil                                                                |
+| sha256-hash                | "baf48084af614b218e2a01de7b1021fa4c2b5ebe181e131608a6580e3949fbcb" |
+|----------------------------+--------------------------------------------------------------------|
 
 *** Response (Input)
 |---------+---------------------|
@@ -181,6 +209,14 @@ The form of these maps is as follows:
 | :status | 10                  |
 | :meta   | "Enter coordinates" |
 |---------+---------------------|
+
+*** Response (Sensitive Input)
+|---------+----------------------------|
+| Key     | Example Value              |
+|---------+----------------------------|
+| :status | 11                         |
+| :meta   | "Enter secret launch code" |
+|---------+----------------------------|
 
 *** Response (Success)
 |---------+------------------------------------------------|
@@ -191,13 +227,21 @@ The form of these maps is as follows:
 | :body   | "# Space TODOs\n\n* Explore\n* Hack\n* Profit! |
 |---------+------------------------------------------------|
 
-*** Response (Redirect)
+*** Response (Temporary Redirect)
 |---------+---------------------------------------------------|
 | Key     | Example Value                                     |
 |---------+---------------------------------------------------|
 | :status | 30                                                |
 | :meta   | "gemini://localhost/~someuser/distant-galaxy.clj" |
 |---------+---------------------------------------------------|
+
+*** Response (Permanent Redirect)
+|---------+-----------------------------------------------|
+| Key     | Example Value                                 |
+|---------+-----------------------------------------------|
+| :status | 31                                            |
+| :meta   | "gemini://localhost/~someuser/black-hole.clj" |
+|---------+-----------------------------------------------|
 
 *** Response (Temporary Failure)
 |---------+--------------------------|
@@ -207,6 +251,38 @@ The form of these maps is as follows:
 | :meta   | "Danger, Will Robinson!" |
 |---------+--------------------------|
 
+*** Response (Server Unavailable)
+|---------+------------------------|
+| Key     | Example Value          |
+|---------+------------------------|
+| :status | 41                     |
+| :meta   | "We're lost in space!" |
+|---------+------------------------|
+
+*** Response (CGI Error)
+|---------+-----------------------|
+| Key     | Example Value         |
+|---------+-----------------------|
+| :status | 42                    |
+| :meta   | "Segmentation fault." |
+|---------+-----------------------|
+
+*** Response (Proxy Error)
+|---------+---------------------------|
+| Key     | Example Value             |
+|---------+---------------------------|
+| :status | 43                        |
+| :meta   | "The wormhole is closed!" |
+|---------+---------------------------|
+
+*** Response (Slow Down)
+|---------+---------------|
+| Key     | Example Value |
+|---------+---------------|
+| :status |            44 |
+| :meta   |             2 | <-- seconds to wait
+|---------+---------------|
+
 *** Response (Permanent Failure)
 |---------+-------------------------------------|
 | Key     | Example Value                       |
@@ -215,14 +291,74 @@ The form of these maps is as follows:
 | :meta   | "Warning! System Failure Detected!" |
 |---------+-------------------------------------|
 
-*NOTE:* While supporting ad-hoc CLJ scripts in this way provides users
-        with a great deal of flexibility in building out dynamic
-        Gemini applications in Clojure, it is certainly not the most
-        secure approach in the world. Keep in mind that all CLJ
-        scripts run with the same permissions as the server process,
-        so server administrators are encouraged to run Space Age as an
-        unprivileged user whenever it is deployed within a multi-user
-        context.
+*** Response (Not Found)
+|---------+-----------------------------------|
+| Key     | Example Value                     |
+|---------+-----------------------------------|
+| :status | 51                                |
+| :meta   | "Schroedinger's cat may be dead." |
+|---------+-----------------------------------|
+
+*** Response (Gone)
+|---------+------------------------------------------|
+| Key     | Example Value                            |
+|---------+------------------------------------------|
+| :status | 52                                       |
+| :meta   | "Schroedinger's cat is definitely dead." |
+|---------+------------------------------------------|
+
+*** Response (Proxy Request Refused)
+|---------+-----------------------------------------------|
+| Key     | Example Value                                 |
+|---------+-----------------------------------------------|
+| :status | 53                                            |
+| :meta   | "The wormhole is emitting a repulsion field!" |
+|---------+-----------------------------------------------|
+
+*** Response (Bad Request)
+|---------+-----------------------------------------|
+| Key     | Example Value                           |
+|---------+-----------------------------------------|
+| :status | 59                                      |
+| :meta   | "HAL9000 says: Input does not compute." |
+|---------+-----------------------------------------|
+
+*** Response (Client Certificate Required)
+|---------+---------------------------------------|
+| Key     | Example Value                         |
+|---------+---------------------------------------|
+| :status | 60                                    |
+| :meta   | "Please present your Space Force ID." |
+|---------+---------------------------------------|
+
+*** Response (Client Certificate Not Authorised)
+|---------+-----------------------------------------------|
+| Key     | Example Value                                 |
+|---------+-----------------------------------------------|
+| :status | 61                                            |
+| :meta   | "Unauthorised ID. You need higher clearance." |
+|---------+-----------------------------------------------|
+
+*** Response (Client Certificate Not Valid)
+|---------+------------------------------------|
+| Key     | Example Value                      |
+|---------+------------------------------------|
+| :status | 62                                 |
+| :meta   | "Your Space Force ID has expired." |
+|---------+------------------------------------|
+
+*** Utility Functions for Generating Responses
+
+Although you can simply create any of the response maps described
+above using Clojure's map literals, Space Age comes fully loaded with
+a collection of utility functions that produce each of these response
+maps for you (see src/space_age/responses.clj). You can import these
+functions into your CLJ scripts by adding this line to the top of your
+script:
+
+#+begin_src clojure
+(require '[space-age.responses :refer :all])
+#+end_src
 
 ** Handling MIME Types
 

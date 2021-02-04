@@ -71,15 +71,20 @@
 
 (defn- get-client-certificate [^SSLSession session]
   (when-let [certificate-chain (try (.getPeerCertificates session) (catch Exception _ nil))]
-    (let [^X509Certificate client-cert (first certificate-chain)]
+    (let [^X509Certificate client-cert (first certificate-chain)
+          subject-distinguished-name   (.getName (.getSubjectX500Principal client-cert))
+          issuer-distinguished-name    (.getName (.getIssuerX500Principal client-cert))
+          get-common-name              #(second (re-find #"CN=(\S+)" %))]
       {:type                       (.getType client-cert)
        :version                    (.getVersion client-cert)
        :serial-number              (.getSerialNumber client-cert)
        :not-before                 (.getNotBefore client-cert)
        :not-after                  (.getNotAfter client-cert)
-       :subject-distinguished-name (.getName (.getSubjectX500Principal client-cert))
+       :subject-common-name        (get-common-name subject-distinguished-name)
+       :subject-distinguished-name subject-distinguished-name
        :subject-alternative-names  (seq (.getSubjectAlternativeNames client-cert))
-       :issuer-distinguished-name  (.getName (.getIssuerX500Principal client-cert))
+       :issuer-common-name         (get-common-name issuer-distinguished-name)
+       :issuer-distinguished-name  issuer-distinguished-name
        :issuer-alternative-names   (seq (.getIssuerAlternativeNames client-cert))
        :sha256-hash                (sha256-hash (.getEncoded client-cert))})))
 

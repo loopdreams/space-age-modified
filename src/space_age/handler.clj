@@ -66,7 +66,9 @@
       (loop [path-thus-far           (first path-segments)
              remaining-path-segments (rest path-segments)]
         (if-let [script-file (check-for-script directory path-thus-far)]
-          [script-file (vec remaining-path-segments)]
+          {:script-file script-file
+           :script-path path-thus-far
+           :path-args   (vec remaining-path-segments)}
           (when (seq remaining-path-segments)
             (recur (str path-thus-far "/" (first remaining-path-segments))
                    (rest remaining-path-segments))))))))
@@ -79,10 +81,16 @@
           user-home (if (and env-home env-user)
                       (str/replace env-home env-user user)
                       (str "/home/" user))]
-      (or (script-scan (io/file user-home "public_gemini") file-path)
-          [(io/file user-home "public_gemini" file-path)]))
-    (or (script-scan (io/file document-root) (subs path 1))
-        [(io/file document-root (subs path 1))])))
+      (if-let [script-info (script-scan (io/file user-home "public_gemini") file-path)]
+        [{:script-file script-info}
+         (str "/~" user "/" {:script-path script-info})
+         {:path-args script-info}]
+        [(io/file user-home "public_gemini" file-path)]))
+    (if-let [script-info (script-scan (io/file document-root) (subs path 1))]
+      [{:script-file script-info}
+       (str "/" {:script-path script-info})
+       {:path-args script-info}]
+      [(io/file document-root (subs path 1))])))
 
 ;; Currently we serve up any readable file under a user's home
 ;; directory or the document-root directory. If a directory is
@@ -94,11 +102,13 @@
 ;; Otherwise, an error response is returned.
 (defn process-request [document-root {:keys [path raw-path raw-query] :as request}]
   (try
-    (let [[^File file path-args] (path->file document-root path)]
+    (let [[^File file script-path path-args] (path->file document-root path)]
       (if (and (.isFile file) (.canRead file))
         (let [filename (.getName file)]
           (if (and (= "clj" (get-extension filename)) (.canExecute file))
-            (run-clj-script file (update request :params #(into path-args %)))
+            (run-clj-script file (-> request
+                                     (assoc :script-path script-path)
+                                     (update :params #(into path-args %))))
             (success-response (get-mime-type filename) file)))
         (if (and (.isDirectory file) (.canRead file))
           (if-not (str/ends-with? path "/")

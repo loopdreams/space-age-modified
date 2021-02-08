@@ -82,14 +82,14 @@
                       (str/replace env-home env-user user)
                       (str "/home/" user))]
       (if-let [script-info (script-scan (io/file user-home "public_gemini") file-path)]
-        [{:script-file script-info}
-         (str "/~" user "/" {:script-path script-info})
-         {:path-args script-info}]
+        [(:script-file script-info)
+         (str "/~" user "/" (:script-path script-info))
+         (:path-args script-info)]
         [(io/file user-home "public_gemini" file-path)]))
     (if-let [script-info (script-scan (io/file document-root) (subs path 1))]
-      [{:script-file script-info}
-       (str "/" {:script-path script-info})
-       {:path-args script-info}]
+      [(:script-file script-info)
+       (str "/" (:script-path script-info))
+       (:path-args script-info)]
       [(io/file document-root (subs path 1))])))
 
 ;; Currently we serve up any readable file under a user's home

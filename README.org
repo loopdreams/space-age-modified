@@ -2,8 +2,8 @@
 
 Space Age is a Gemini server written in Clojure (https://clojure.org/).
 
-It implements Gemini protocol specification v0.14.2 (July 2nd 2020),
-which can be found here:
+It implements Gemini protocol specification v0.14.3 (November 29th
+2020), which can be found here:
 
   gemini://gemini.circumlunar.space/docs/specification.gmi
 
@@ -146,6 +146,18 @@ file with the usual "ns" form. This also means that any "def*" forms
 in your script (e.g., def, defn, defmacro) won't pollute the server's
 pre-existing namespaces.
 
+Your script files on disk should all end with the standard ".clj"
+extension for Clojure files. However, you may omit the file extension
+in your URL paths. Therefore these two URLs will both run the same
+script file in Space Age:
+
+- With .clj :: gemini://localhost/my-script.clj
+- Without .clj :: gemini://localhost/my-script
+
+*NOTE*: If the script path is followed by any additional path
+        segments, they will be included in the ":params" vector on the
+        request map passed to the script (see below).
+
 Within the CLJ script, you will automatically have access to
 everything in the clojure.core namespace and can use "require" and
 "import" to load any additional Clojure namespaces or Java classes
@@ -169,20 +181,21 @@ return a response map as its sole output.
 The form of these maps is as follows:
 
 *** Request
-|-------------+-----------------------------------------------------------------------|
-| Key         | Example Value                                                         |
-|-------------+-----------------------------------------------------------------------|
-| uri         | "gemini://localhost/~someuser/buzz.clj?Up%2C%20up%2C%20and%20away%21" |
-| scheme      | "gemini"                                                              |
-| host        | "localhost"                                                           |
-| port        | 1965                                                                  |
-| raw-path    | "/~someuser/buzz.clj"                                                 |
-| path        | "/~someuser/buzz.clj"                                                 |
-| raw-query   | "Up%2C%20up%2C%20and%20away%21"                                       |
-| query       | "Up, up, and away!"                                                   |
-| params      | ["Up, up, and away!"]                                                 |
-| client-cert | a map (see below) or nil if no cert has been provided                 |
-|-------------+-----------------------------------------------------------------------|
+|-------------+-------------------------------------------------------------------------------|
+| Key         | Example Value                                                                 |
+|-------------+-------------------------------------------------------------------------------|
+| uri         | "gemini://localhost/~someuser/buzz/foo/bar/baz?Up%2C%20up%2C%20and%20away%21" |
+| scheme      | "gemini"                                                                      |
+| host        | "localhost"                                                                   |
+| port        | 1965                                                                          |
+| raw-path    | "/~someuser/buzz/foo/bar/baz"                                                 |
+| path        | "/~someuser/buzz/foo/bar/baz"                                                 |
+| script-path | "/~someuser/buzz"                                                             |
+| raw-query   | "Up%2C%20up%2C%20and%20away%21"                                               |
+| query       | "Up, up, and away!"                                                           |
+| params      | ["foo" "bar" "baz" "Up, up, and away!"]                                       |
+| client-cert | a map (see below) or nil if no cert has been provided                         |
+|-------------+-------------------------------------------------------------------------------|
 
 *** Client Cert
 |----------------------------+--------------------------------------------------------------------|

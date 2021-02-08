@@ -18,7 +18,5 @@
        :path         (if (str/blank? (.getPath uri-obj)) "/" (.getPath uri-obj))
        :raw-query    (.getRawQuery uri-obj)
        :query        (.getQuery uri-obj)
-       :raw-fragment (.getRawFragment uri-obj)
-       :fragment     (.getFragment uri-obj)
        :params       (parse-query (.getQuery uri-obj))})
     (catch Exception _ {:uri uri :parse-error? true})))

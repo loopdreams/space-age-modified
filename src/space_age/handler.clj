@@ -66,7 +66,7 @@
 ;; namespace and its "main" function (if any) is run. If the return
 ;; value is a valid Gemini response, it is returned to the client.
 ;; Otherwise, an error response is returned.
-(defn process-request [document-root {:keys [path raw-path raw-query raw-fragment] :as request}]
+(defn process-request [document-root {:keys [path raw-path raw-query] :as request}]
   (try
     (let [^File file (path->file document-root path)]
       (if (and (.isFile file) (.canRead file))
@@ -76,9 +76,7 @@
             (success-response (get-mime-type filename) file)))
         (if (and (.isDirectory file) (.canRead file))
           (if-not (str/ends-with? path "/")
-            (permanent-redirect-response (str raw-path "/"
-                                              (when raw-query "?") raw-query
-                                              (when raw-fragment "#") raw-fragment))
+            (permanent-redirect-response (str raw-path "/" (when raw-query "?") raw-query))
             (if-let [^File index-file (->> ["index.gmi" "index.gemini"]
                                            (map #(io/file file %))
                                            (filter #(and (.isFile ^File %) (.canRead ^File %)))

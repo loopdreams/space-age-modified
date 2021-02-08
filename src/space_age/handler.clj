@@ -18,7 +18,8 @@
 (defn valid-response? [response]
   (and (map? response)
        (contains? valid-status-codes (:status response))
-       (string? (:meta response))
+       (or (string? (:meta response))
+           (integer? (:meta response)))
        (or (nil? (:body response))
            (string? (:body response))
            (instance? File (:body response)))))

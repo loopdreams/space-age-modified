@@ -1,3 +1,5 @@
 .cpcache
 .nrepl-port
+install/space-age-*.jar
+pom.xml
 resources/keystore.jks

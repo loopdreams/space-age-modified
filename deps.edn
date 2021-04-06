@@ -1,8 +1,20 @@
 {:paths   ["src" "resources"]
- :deps    {org.clojure/clojure {:mvn/version "1.10.1"}}
+ :deps    {org.clojure/clojure {:mvn/version "1.10.3"}}
  :aliases {:run-server       {:jvm-opts  ["-Djavax.net.ssl.keyStore=resources/keystore.jks"
                                           "-Djavax.net.ssl.keyStorePassword=moonshot"
                                           "-Dsni.hostname=localhost"]
                               :main-opts ["-m" "space-age.server"]}
            :check-reflection {:main-opts ["-e" "(do,(set!,*warn-on-reflection*,true),nil)"
-                                          "-e" "(require,'space-age.server)"]}}}
+                                          "-e" "(require,'space-age.server)"]}
+           :check-deps       {:extra-deps {olical/depot {:mvn/version "1.8.4"}}
+                              :main-opts  ["-m" "depot.outdated.main"]}
+           :make-uberjar     {:replace-deps {com.github.seancorfield/depstar {:mvn/version "2.0.211"}}
+                              :exec-fn      hf.depstar/uberjar
+                              :exec-args    {:aot         true
+                                             :sync-pom    true
+                                             :group-id    "lambdatronic"
+                                             :artifact-id "space-age"
+                                             :version     "20210406"
+                                             :main-class  "space-age.server"
+                                             :exclude     [".+\\.jks$"]
+                                             :jar         "install/space-age-20210406.jar"}}}}

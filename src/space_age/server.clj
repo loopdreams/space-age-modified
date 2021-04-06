@@ -1,4 +1,5 @@
 (ns space-age.server
+  (:gen-class)
   (:import (java.io BufferedReader FileInputStream)
            (javax.net.ssl SSLSession SSLContext SSLServerSocket SSLSocket SSLParameters
                           KeyManagerFactory TrustManager X509TrustManager)

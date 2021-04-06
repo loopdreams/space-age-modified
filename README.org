@@ -36,7 +36,7 @@ earlier) to generate a 2048 bit RSA key pair and self-signed
 certificate (SHA256withRSA) with a validity of 365 days:
 
 #+begin_src sh
-$ keytool -genkey -keyalg RSA -keysize 2048 -alias selfsigned -validity 365 -keystore resources/keystore.jks -storepass moonshot
+keytool -genkey -keyalg RSA -keysize 2048 -alias selfsigned -validity 365 -keystore resources/keystore.jks -storepass moonshot
 #+end_src
 
 When run from this repository's toplevel directory, this command will
@@ -57,13 +57,13 @@ settings in the :run-server alias:
 - javax.net.ssl.keyStore
 - javax.net.ssl.keyStorePassword
 
-** Running the Server
+** Running the Server with Clojure
 
 To launch the Gemini server, simply navigate to the repository's
 toplevel directory and run this command:
 
 #+begin_src sh
-$ clojure -M:run-server /my/document/root/directory
+clojure -M:run-server /my/document/root/directory
 #+end_src
 
 This will start the server on port 1965 and will use
@@ -83,14 +83,39 @@ file of your choosing. On a Unix system, this can be accomplished like
 so:
 
 #+begin_src sh
-$ clojure -M:run-server /my/document/root/directory &> some_file.log
+clojure -M:run-server /my/document/root/directory &> some_file.log
 #+end_src
 
 If you would like to run the server on a different port, you can
 specify that as the second argument to the run-server alias like so:
 
 #+begin_src sh
-$ clojure -M:run-server /my/document/root/directory 31337
+clojure -M:run-server /my/document/root/directory 31337
+#+end_src
+
+** Running the Server with a Shell Script
+
+If you would prefer to launch Space Age from a shell script, simply
+navigate to the repository's toplevel directory and run this command
+to build an UberJAR:
+
+#+begin_src sh
+clojure -X:make-uberjar
+#+end_src
+
+This will create a JAR file in the =install= directory called
+=space-age-<version>.jar=. This directory also contains a simple
+=space-age.sh= shell script to launch the server.
+
+In order to make launching the server easy from the command line, you
+should move =install/space-age.sh= somewhere on your =PATH= and update
+the variable definitions within it to point to your =keystore.jks= and
+=space-age-<version>.jar= files.
+
+Once this is done, you can launch the server with the folowing command:
+
+#+begin_src sh
+space-age.sh /my/document/root/directory
 #+end_src
 
 ** Mapping Routes to the Filesystem

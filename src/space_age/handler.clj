@@ -90,17 +90,18 @@
            :target-file script-file
            :target-type :script)
     (let [target-file (io/file document-root search-path)
-          target-type (get-file-type target-file)
-          index-file  (when (= target-type :directory) (check-for-index target-file))]
-      (cond-> (assoc request
-                     :target-file target-file
-                     :target-type target-type)
-
-        (and (= target-type :directory) (not (str/ends-with? path "/")))
-        (assoc :target-type :directory-no-slash)
-
-        index-file
-        (assoc :target-file index-file :target-type :file)))))
+          target-type (get-file-type target-file)]
+      (if (and (= target-type :directory) (not (str/ends-with? path "/")))
+        (assoc request
+               :target-file target-file
+               :target-type :directory-no-slash)
+        (if-let [index-file (when (= target-type :directory) (check-for-index target-file))]
+          (assoc request
+                 :target-file index-file
+                 :target-type :file)
+          (assoc request
+                 :target-file target-file
+                 :target-type target-type))))))
 
 (defn ensure-clj-extension [search-path]
   (if (str/ends-with? search-path ".clj")
@@ -109,7 +110,7 @@
 
 (defn check-for-script [document-root search-path]
   (let [possible-script-files (cond->> (list (io/file document-root search-path "index.clj"))
-                                (seq search-path)
+                                (not= search-path "")
                                 (cons (io/file document-root (ensure-clj-extension search-path))))]
     (first
      (filter #(and (.isFile %)

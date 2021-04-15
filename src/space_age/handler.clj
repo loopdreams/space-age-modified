@@ -1,10 +1,10 @@
-;; FIXME: Harden this namespace by making all def'ed symbols private if possible
+;; TODO: Harden this namespace by making all def'ed symbols private if possible
 (ns space-age.handler
   (:import java.io.File)
   (:require [clojure.string :as str]
             [clojure.java.io :as io]
             [space-age.logging :refer [log]]
-            [space-age.mime-types :refer [get-extension get-mime-type]]
+            [space-age.mime-types :refer [get-mime-type]]
             [space-age.responses :refer [success-response
                                          permanent-redirect-response
                                          temporary-failure-response
@@ -24,7 +24,18 @@
            (string? (:body response))
            (instance? File (:body response)))))
 
-;; FIXME: Reject any scripts containing calls to these functions: (ns in-ns remove-ns shutdown-agents System/exit load-mime-types!)
+(defn clean-request [{:keys [path-args] :as request}]
+  (-> request
+      (update :params #(into path-args %))
+      (dissoc :document-root
+              :search-path-prefix
+              :search-path
+              :script-file
+              :path-args
+              :target-file
+              :target-type)))
+
+;; TODO: Reject any scripts containing calls to these functions: (ns in-ns remove-ns shutdown-agents System/exit load-mime-types!)
 (defn run-clj-script [^File file request]
   (let [script-ns-name (gensym "script")]
     (try
@@ -32,7 +43,7 @@
         (refer-clojure)
         (with-out-str (load-file (.getPath file))) ; mute script's stdout
         (if-let [main-fn (resolve 'main)]
-          (let [response (main-fn request)]
+          (let [response (main-fn (clean-request request))]
             (if (valid-response? response)
               response
               (cgi-error-response "Script error: Malformed response.")))
@@ -48,49 +59,101 @@
        (str/join)
        (str "Directory Listing: " path "\n\n")))
 
-(defn ensure-clj-extension [file-path]
-  (if (str/ends-with? file-path ".clj")
-    file-path
-    (str file-path ".clj")))
+(defn generate-response [{:keys [^File target-file target-type path raw-path raw-query] :as request}]
+  (case target-type
+    :script               (run-clj-script target-file request)
+    :file                 (success-response (get-mime-type (.getName target-file)) target-file)
+    :directory            (success-response (get-mime-type "directory.gmi") (make-directory-listing path target-file))
+    :directory-no-slash   (permanent-redirect-response (str raw-path "/" (when raw-query "?") raw-query))
+    :unreadable-file      (permanent-failure-response "File exists but is not readable.")
+    :unreadable-directory (permanent-failure-response "Directory exists but is not readable.")
+    :file-not-found       (not-found-response "File not found.")))
 
-(defn check-for-script [directory file-path]
-  (let [possible-script-file (io/file directory (ensure-clj-extension file-path))]
-    (when (and (.isFile possible-script-file)
-               (.canRead possible-script-file)
-               (.canExecute possible-script-file))
-      possible-script-file)))
+(defn check-for-index [directory]
+  (->> ["index.gmi" "index.gemini"]
+       (map #(io/file directory %))
+       (filter #(and (.isFile ^File %) (.canRead ^File %)))
+       (first)))
 
-(defn script-scan [directory path]
-  (when-not (str/blank? path)
-    (let [path-segments (str/split path #"/")]
-      (loop [path-thus-far           (first path-segments)
-             remaining-path-segments (rest path-segments)]
-        (if-let [script-file (check-for-script directory path-thus-far)]
-          {:script-file script-file
-           :script-path path-thus-far
-           :path-args   (vec remaining-path-segments)}
-          (when (seq remaining-path-segments)
-            (recur (str path-thus-far "/" (first remaining-path-segments))
-                   (rest remaining-path-segments))))))))
+(defn get-file-type [^File file]
+  (cond (.isFile file)      (if (.canRead file)
+                              :file
+                              :unreadable-file)
+        (.isDirectory file) (if (.canRead file)
+                              :directory
+                              :unreadable-directory)
+        :else               :file-not-found))
 
-;; FIXME: This is pretty ugly code. Make it more elegant.
-(defn path->file [document-root path]
-  (if-let [[_ user file-path] (re-find #"^/~([^/]+)/?(.*)$" path)]
-    (let [env-home  (System/getenv "HOME")
-          env-user  (System/getenv "USER")
-          user-home (if (and env-home env-user)
-                      (str/replace env-home env-user user)
-                      (str "/home/" user))]
-      (if-let [script-info (script-scan (io/file user-home "public_gemini") file-path)]
-        [(:script-file script-info)
-         (str "/~" user "/" (:script-path script-info))
-         (:path-args script-info)]
-        [(io/file user-home "public_gemini" file-path)]))
-    (if-let [script-info (script-scan (io/file document-root) (subs path 1))]
-      [(:script-file script-info)
-       (str "/" (:script-path script-info))
-       (:path-args script-info)]
-      [(io/file document-root (subs path 1))])))
+(defn identify-target-file [{:keys [document-root search-path script-file path] :as request}]
+  (if script-file
+    (assoc request
+           :target-file script-file
+           :target-type :script)
+    (let [target-file (io/file document-root search-path)
+          target-type (get-file-type target-file)
+          index-file  (when (= target-type :directory) (check-for-index target-file))]
+      (cond-> (assoc request
+                     :target-file target-file
+                     :target-type target-type)
+
+        (and (= target-type :directory) (not (str/ends-with? path "/")))
+        (assoc :target-type :directory-no-slash)
+
+        index-file
+        (assoc :target-file index-file :target-type :file)))))
+
+(defn ensure-clj-extension [search-path]
+  (if (str/ends-with? search-path ".clj")
+    search-path
+    (str search-path ".clj")))
+
+(defn check-for-script [document-root search-path]
+  (let [possible-script-files (cond->> (list (io/file document-root search-path "index.clj"))
+                                (seq search-path)
+                                (cons (io/file document-root (ensure-clj-extension search-path))))]
+    (first
+     (filter #(and (.isFile %)
+                   (.canRead %)
+                   (.canExecute %))
+             possible-script-files))))
+
+(defn scan-for-scripts [{:keys [document-root search-path-prefix search-path] :as request}]
+  (let [path-segments (str/split search-path #"/")]
+    (loop [path-thus-far           (first path-segments)
+           remaining-path-segments (rest path-segments)]
+      (if-let [script-file (check-for-script document-root path-thus-far)]
+        (assoc request
+               :script-file script-file
+               :script-path (str search-path-prefix path-thus-far)
+               :path-args   (vec remaining-path-segments))
+        (if (seq remaining-path-segments)
+          (recur (str path-thus-far "/" (first remaining-path-segments))
+                 (rest remaining-path-segments))
+          request)))))
+
+(defn get-home-dir [user]
+  (let [env-home (System/getenv "HOME")
+        env-user (System/getenv "USER")]
+    (if (and env-home env-user)
+      (str/replace env-home env-user user)
+      (str "/home/" user))))
+
+(defn identify-search-path [{:keys [path] :as request} document-root]
+  (if-let [[_ user search-path] (re-find #"^/~([^/]+)/?(.*)$" path)]
+    (assoc request
+           :document-root      (.getPath (io/file (get-home-dir user) "public_gemini"))
+           :search-path-prefix (str "/~" user "/")
+           :search-path        search-path)
+    (assoc request
+           :document-root      document-root
+           :search-path-prefix "/"
+           :search-path        (subs path 1))))
+
+;; TODO: Return status code 53 if host and port do not match expected values for this server
+(defn check-request [{:keys [parse-error? scheme path]}]
+  (cond parse-error?               "Malformed URI."
+        (not= scheme "gemini")     (format "Protocol \"%s\" is not supported." scheme)
+        (str/includes? path "/..") "Paths may not contain /.. elements."))
 
 ;; Currently we serve up any readable file under a user's home
 ;; directory or the document-root directory. If a directory is
@@ -100,44 +163,15 @@
 ;; namespace and its "main" function (if any) is run. If the return
 ;; value is a valid Gemini response, it is returned to the client.
 ;; Otherwise, an error response is returned.
-(defn process-request [document-root {:keys [path raw-path raw-query] :as request}]
-  (try
-    (let [[^File file script-path path-args] (path->file document-root path)]
-      (if (and (.isFile file) (.canRead file))
-        (let [filename (.getName file)]
-          (if (and (= "clj" (get-extension filename)) (.canExecute file))
-            (run-clj-script file (-> request
-                                     (assoc :script-path script-path)
-                                     (update :params #(into path-args %))))
-            (success-response (get-mime-type filename) file)))
-        (if (and (.isDirectory file) (.canRead file))
-          (if-not (str/ends-with? path "/")
-            (permanent-redirect-response (str raw-path "/" (when raw-query "?") raw-query))
-            (if-let [^File index-file (->> ["index.gmi" "index.gemini"]
-                                           (map #(io/file file %))
-                                           (filter #(and (.isFile ^File %) (.canRead ^File %)))
-                                           (first))]
-              (success-response (get-mime-type (.getName index-file)) index-file)
-              (success-response (get-mime-type "directory.gmi")
-                                (make-directory-listing path file))))
-          (if (.exists file)
-            (permanent-failure-response "File exists but is not readable.")
-            (not-found-response "File not found.")))))
-    (catch Exception e
-      (temporary-failure-response (str "Error processing request: " (.getMessage e))))))
-
-;; Example URI: gemini://myhost.org/foo/bar.clj?baz&buzz&bazizzle\r\n
-;; FIXME: Return status code 53 if host and port do not match expected values for this server
-(defn gemini-handler [document-root {:keys [uri parse-error? scheme path] :as request}]
-  (log uri)
-  (cond parse-error?
-        (bad-request-response "Malformed URI.")
-
-        (not= scheme "gemini")
-        (bad-request-response (str "Protocol \"" scheme "\" is not supported."))
-
-        (str/includes? path "/..")
-        (bad-request-response "Paths may not contain /.. elements.")
-
-        :else
-        (process-request document-root request)))
+(defn gemini-handler [document-root request]
+  (log (:uri request))
+  (if-let [error-msg (check-request request)]
+    (bad-request-response error-msg)
+    (try
+      (-> request
+          (identify-search-path document-root)
+          (scan-for-scripts)
+          (identify-target-file)
+          (generate-response))
+      (catch Exception e
+        (temporary-failure-response (str "Error processing request: " (.getMessage e)))))))

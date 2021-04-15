@@ -7,6 +7,7 @@
     []
     (str/split query #"&")))
 
+;; Example URI: gemini://myhost.org/foo/bar.clj?baz&buzz&bazizzle\r\n
 (defn parse-uri [uri]
   (try
     (let [uri-obj (URI/create (str/trim uri))]

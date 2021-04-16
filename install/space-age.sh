@@ -3,7 +3,7 @@
 SPACE_AGE_KEYSTORE=../resources/keystore.jks
 SPACE_AGE_KEYSTORE_PASSWORD=moonshot
 SPACE_AGE_HOSTNAME=localhost
-SPACE_AGE_JAR=./space-age-20210415.jar
+SPACE_AGE_JAR=./space-age-20210416.jar
 
 java -Djavax.net.ssl.keyStore=$SPACE_AGE_KEYSTORE \
      -Djavax.net.ssl.keyStorePassword=$SPACE_AGE_KEYSTORE_PASSWORD \

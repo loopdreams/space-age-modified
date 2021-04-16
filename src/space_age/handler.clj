@@ -107,15 +107,17 @@
     (loop [script-fns              []
            path-thus-far           (first path-segments)
            remaining-path-segments (rest path-segments)]
-      (let [script-file (check-for-script document-root path-thus-far)]
+      (let [script-file (check-for-script document-root path-thus-far)
+            script-fn   (when script-file
+                          #(run-clj-script script-file
+                                           (assoc %
+                                                  :script-path (str search-path-prefix path-thus-far)
+                                                  :path-args   (vec remaining-path-segments))))
+            script-fns  (if script-fn
+                          (conj script-fns script-fn)
+                          script-fns)]
         (if (seq remaining-path-segments)
-          (recur (if script-file
-                   (conj script-fns
-                         #(run-clj-script script-file
-                                          (assoc %
-                                                 :script-path (str search-path-prefix path-thus-far)
-                                                 :path-args   (vec remaining-path-segments))))
-                   script-fns)
+          (recur script-fns
                  (if (= path-thus-far "")
                    (first remaining-path-segments)
                    (str path-thus-far "/" (first remaining-path-segments)))

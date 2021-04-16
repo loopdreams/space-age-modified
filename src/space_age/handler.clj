@@ -119,7 +119,8 @@
              possible-script-files))))
 
 (defn scan-for-scripts [{:keys [document-root search-path-prefix search-path] :as request}]
-  (let [path-segments (str/split search-path #"/")]
+  (let [path-segments (cond->> (str/split search-path #"/")
+                        (not= search-path "") (cons ""))]
     (loop [path-thus-far           (first path-segments)
            remaining-path-segments (rest path-segments)]
       (if-let [script-file (check-for-script document-root path-thus-far)]
@@ -128,7 +129,9 @@
                :script-path (str search-path-prefix path-thus-far)
                :path-args   (vec remaining-path-segments))
         (if (seq remaining-path-segments)
-          (recur (str path-thus-far "/" (first remaining-path-segments))
+          (recur (if (= path-thus-far "")
+                   (first remaining-path-segments)
+                   (str path-thus-far "/" (first remaining-path-segments)))
                  (rest remaining-path-segments))
           request)))))
 

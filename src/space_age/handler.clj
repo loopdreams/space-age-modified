@@ -96,9 +96,9 @@
                                 (not= search-path "")
                                 (cons (io/file document-root (ensure-clj-extension search-path))))]
     (first
-     (filter #(and (.isFile %)
-                   (.canRead %)
-                   (.canExecute %))
+     (filter #(and (.isFile ^File %)
+                   (.canRead ^File %)
+                   (.canExecute ^File %))
              possible-script-files))))
 
 (defn collect-scripts [{:keys [document-root search-path-prefix search-path]}]

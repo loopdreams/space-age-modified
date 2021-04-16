@@ -89,10 +89,12 @@
        :issuer-alternative-names   (seq (.getIssuerAlternativeNames client-cert))
        :sha256-hash                (sha256-hash (.getEncoded client-cert))})))
 
-(defn- read-socket! [^SSLSocket socket]
+(defn- read-socket! [^SSLSocket socket document-root]
   (let [session (.getSession socket)
         request (parse-uri (.readLine ^BufferedReader (io/reader socket)))]
-    (assoc request :client-cert (get-client-certificate session))))
+    (assoc request
+           :document-root document-root
+           :client-cert   (get-client-certificate session))))
 
 (defn- write-socket! [^SSLSocket socket {:keys [status meta body]}]
   (doto (io/writer socket)
@@ -111,8 +113,8 @@
     (try
       (let [socket (.accept server-socket)]
         (try
-          (->> (read-socket! socket)
-               (gemini-handler document-root)
+          (->> (read-socket! socket document-root)
+               (gemini-handler)
                (write-socket! socket))
           (catch Exception e
             (log "Server error:" e))

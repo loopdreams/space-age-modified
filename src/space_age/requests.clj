@@ -21,3 +21,7 @@
        :query        (.getQuery uri-obj)
        :params       (parse-query (.getQuery uri-obj))})
     (catch Exception _ {:uri uri :parse-error? true})))
+
+(defn valid-request? [request]
+  (every? #(contains? request %)
+          [:uri :scheme :host :port :raw-path :path :raw-query :query :params]))

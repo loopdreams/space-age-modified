@@ -1,4 +1,5 @@
-(ns space-age.responses)
+(ns space-age.responses
+  (:import java.io.File))
 
 (defn input-response [prompt]
   {:status 10
@@ -73,3 +74,14 @@
 (defn client-certificate-not-valid-response [msg]
   {:status 62
    :meta   msg})
+
+(def valid-status-codes #{10 11 20 30 31 40 41 42 43 44 50 51 52 53 59 60 61 62})
+
+(defn valid-response? [response]
+  (and (map? response)
+       (contains? valid-status-codes (:status response))
+       (or (string? (:meta response))
+           (integer? (:meta response)))
+       (or (nil? (:body response))
+           (string? (:body response))
+           (instance? File (:body response)))))

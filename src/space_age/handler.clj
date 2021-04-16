@@ -63,14 +63,6 @@
                   :target-file target-file
                   :target-type target-type)))))))
 
-(defn clean-request [{:keys [path-args] :as request}]
-  (-> request
-      (update :params #(into path-args %))
-      (dissoc :document-root
-              :search-path-prefix
-              :search-path
-              :path-args)))
-
 ;; TODO: Reject any scripts containing calls to these functions:
 ;;       (ns in-ns remove-ns shutdown-agents System/exit load-mime-types!)
 (defn run-clj-script [^File file request]
@@ -80,7 +72,7 @@
         (refer-clojure)
         (with-out-str (load-file (.getPath file))) ; mute script's stdout
         (if-let [main-fn (resolve 'main)]
-          (main-fn (clean-request request))
+          (main-fn request)
           (cgi-error-response "Script error: No main function.")))
       (catch Exception e
         (cgi-error-response (str "Script error: " (.getMessage e))))
@@ -109,10 +101,11 @@
            remaining-path-segments (rest path-segments)]
       (let [script-file (check-for-script document-root path-thus-far)
             script-fn   (when script-file
-                          #(run-clj-script script-file
-                                           (assoc %
-                                                  :script-path (str search-path-prefix path-thus-far)
-                                                  :path-args   (vec remaining-path-segments))))
+                          (fn [request]
+                            (run-clj-script script-file
+                                            (-> request
+                                                (assoc :script-path (str search-path-prefix path-thus-far))
+                                                (update :params #(into (vec remaining-path-segments) %))))))
             script-fns  (if script-fn
                           (conj script-fns script-fn)
                           script-fns)]
@@ -125,15 +118,17 @@
           script-fns)))))
 
 (defn with-script-runner [handler]
-  (fn [request]
-    (loop [request                            request
-           [script-fn & remaining-script-fns] (collect-scripts request)]
+  (fn [{:keys [document-root search-path] :as request}]
+    (loop [[script-fn & remaining-script-fns] (collect-scripts request)
+           request                            (dissoc request :document-root :search-path-prefix :search-path)]
       (if script-fn
         (let [result (script-fn request)]
-          (cond (valid-request?  result) (recur result remaining-script-fns)
+          (cond (valid-request?  result) (recur remaining-script-fns result)
                 (valid-response? result) result
                 :else                    (cgi-error-response "Script error: Malformed result.")))
-        (handler request)))))
+        (handler (assoc request
+                        :document-root document-root
+                        :search-path   search-path))))))
 
 (defn get-home-dir [user]
   (let [env-home (System/getenv "HOME")

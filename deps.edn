@@ -14,7 +14,7 @@
                                              :sync-pom    true
                                              :group-id    "lambdatronic"
                                              :artifact-id "space-age"
-                                             :version     "20210416"
+                                             :version     "20210422"
                                              :main-class  "space-age.server"
                                              :exclude     [".+\\.jks$"]
-                                             :jar         "install/space-age-20210416.jar"}}}}
+                                             :jar         "install/space-age-20210422.jar"}}}}

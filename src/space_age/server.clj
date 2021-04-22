@@ -112,13 +112,14 @@
   (while @global-server-thread
     (try
       (let [socket (.accept server-socket)]
-        (try
-          (->> (read-socket! socket document-root)
-               (gemini-handler)
-               (write-socket! socket))
-          (catch Exception e
-            (log "Server error:" e))
-          (finally (.close socket))))
+        (future
+          (try
+            (->> (read-socket! socket document-root)
+                 (gemini-handler)
+                 (write-socket! socket))
+            (catch Exception e
+              (log "Server error:" e))
+            (finally (.close socket)))))
       (catch Exception _))))
 
 (defn- stop-server! []

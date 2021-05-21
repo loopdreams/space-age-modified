@@ -180,8 +180,8 @@ script file in Space Age:
 - Without .clj :: gemini://localhost/my-script
 
 *NOTE*: If the script path is followed by any additional path
-        segments, they will be included in the ":params" vector on the
-        request map passed to the script (see below).
+        segments, they will be included in the ":path-args" vector on
+        the request map passed to the script (see below).
 
 Within the CLJ script, you will automatically have access to
 everything in the clojure.core namespace and can use "require" and
@@ -216,11 +216,13 @@ The form of these maps is as follows:
 | raw-path    | "/~someuser/buzz/foo/bar/baz"                                                 |
 | path        | "/~someuser/buzz/foo/bar/baz"                                                 |
 | script-path | "/~someuser/buzz"                                                             |
+| path-args   | ["foo" "bar" "baz"]                                                           |
 | raw-query   | "Up%2C%20up%2C%20and%20away%21"                                               |
 | query       | "Up, up, and away!"                                                           |
-| params      | ["foo" "bar" "baz" "Up, up, and away!"]                                       |
 | client-cert | a map (see below) or nil if no cert has been provided                         |
 |-------------+-------------------------------------------------------------------------------|
+
+NOTE: In the above example, we assume that there is an executable script file at /~someuser/buzz.clj.
 
 *** Client Cert
 |----------------------------+--------------------------------------------------------------------|

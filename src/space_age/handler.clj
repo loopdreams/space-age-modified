@@ -105,7 +105,7 @@
                             (run-clj-script script-file
                                             (-> request
                                                 (assoc :script-path (str search-path-prefix path-thus-far))
-                                                (update :params #(into (vec remaining-path-segments) %))))))
+                                                (assoc :path-args (vec remaining-path-segments))))))
             script-fns  (if script-fn
                           (conj script-fns script-fn)
                           script-fns)]

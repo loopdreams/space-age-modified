@@ -2,12 +2,7 @@
   (:import java.net.URI)
   (:require [clojure.string :as str]))
 
-(defn- parse-query [query]
-  (if (str/blank? query)
-    []
-    (str/split query #"&")))
-
-;; Example URI: gemini://myhost.org/foo/bar.clj?baz&buzz&bazizzle\r\n
+;; Example URI: gemini://myhost.org/foo/bar.clj?baz\r\n
 (defn parse-uri [uri]
   (try
     (let [uri-obj (URI/create (str/trim uri))]
@@ -18,10 +13,9 @@
        :raw-path     (if (str/blank? (.getRawPath uri-obj)) "/" (.getRawPath uri-obj))
        :path         (if (str/blank? (.getPath uri-obj)) "/" (.getPath uri-obj))
        :raw-query    (.getRawQuery uri-obj)
-       :query        (.getQuery uri-obj)
-       :params       (parse-query (.getQuery uri-obj))})
+       :query        (.getQuery uri-obj)})
     (catch Exception _ {:uri uri :parse-error? true})))
 
 (defn valid-request? [request]
   (every? #(contains? request %)
-          [:uri :scheme :host :port :raw-path :path :raw-query :query :params]))
+          [:uri :scheme :host :port :raw-path :path :raw-query :query]))

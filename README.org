@@ -36,7 +36,7 @@ earlier) to generate a 2048 bit RSA key pair and self-signed
 certificate (SHA256withRSA) with a validity of 365 days:
 
 #+begin_src sh
-keytool -genkey -keyalg RSA -keysize 2048 -alias selfsigned -validity 365 -keystore resources/keystore.jks -storepass moonshot
+keytool -genkeypair -keyalg RSA -keysize 2048 -validity 365 -alias selfsigned -keystore resources/keystore.jks -storepass moonshot
 #+end_src
 
 When run from this repository's toplevel directory, this command will

@@ -75,7 +75,7 @@
     (let [^X509Certificate client-cert (first certificate-chain)
           subject-distinguished-name   (.getName (.getSubjectX500Principal client-cert))
           issuer-distinguished-name    (.getName (.getIssuerX500Principal client-cert))
-          get-common-name              #(second (re-find #"CN=(\S+)" %))]
+          get-common-name              #(second (re-find #"CN=([^,]+)" %))]
       {:type                       (.getType client-cert)
        :version                    (.getVersion client-cert)
        :serial-number              (.getSerialNumber client-cert)

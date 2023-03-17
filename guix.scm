@@ -71,8 +71,8 @@
     ;;    All the test namespaces are required along with
     ;;    `clojure.test`, and then `clojure.test/run-tests` is called
     ;;    on all the test namespaces to determine if they pass or not.
-    #:tests?           #f
-    #:test-dirs        '()
+    #:tests?           #t
+    #:test-dirs        '("test/")
     #:test-include     '(#:all)
     #:test-exclude     '()
     ;; 5. All the JARs created thus far are copied to the default
@@ -85,5 +85,5 @@
     #:doc-regex        "^(README.*|.*\\.html|.*\\.org|.*\\.md|\\.markdown|\\.txt)$"
     #:doc-dirs         '()))
  (synopsis "Space-Age is a Gemini server written in Clojure.")
- (description "It implements Gemini protocol specification v0.14.3 (November 29th, 2020), which can be found here: gemini://gemini.circumlunar.space/docs/specification.gmi")
+ (description "Feature-complete implementation of Gemini protocol specification v0.14.3 (November 29th, 2020 - gemini://gemini.circumlunar.space/docs/specification.gmi). Provides a unique Ring-like programming model for server-side scripting.")
  (license epl2.0))

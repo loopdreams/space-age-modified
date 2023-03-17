@@ -60,7 +60,7 @@
     ;;    in the JARs. If a #:main-class is specified (as a symbol
     ;;    naming a compiled Java class), then its main method will be
     ;;    set as the entrypoint for each JAR.
-    #:jar-names        '("space-age-2022.04.14-f757cb6.jar" "space-age.jar")
+    #:jar-names        '("space-age-2023.03.17-5feb703.jar" "space-age.jar")
     #:omit-source?     #f
     #:main-class       'space_age.server
     ;; 4. If #:tests? is #t, *.clj(c)? files in #:test-dirs are

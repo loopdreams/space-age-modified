@@ -21,17 +21,17 @@
 
 (package
  (name "space-age")
- (version "2022.04.14-f757cb6")
+ (version "2023.03.17-5feb703")
  (home-page "https://gitlab.com/lambdatronic/space-age")
  (source (origin
           (method git-fetch)
           (uri (git-reference
                 (url home-page)
-                (commit "f757cb60ccd24290cb95a59ba48fa0a1bc79decb")))
+                (commit "5feb703c724b078347249c728d6cc9ca94191272")))
           (file-name (git-file-name name version))
           (sha256
            (base32
-            "01prjw5gszlai0pgkvcfbbn9nkfx2i15v7vhy3lpbdal73hcdpgg"))))
+            "0jcmp8gpzbd4cvsj3l5frd6m2mkrsc579yjx7ccrqsri0v1rgqnh"))))
  (build-system clojure-build-system)
  (arguments
   `(;; 0. The specified #:jdk and #:clojure packages will be used for

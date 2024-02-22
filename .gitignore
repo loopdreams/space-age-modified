@@ -1,5 +1,5 @@
 .cpcache
 .nrepl-port
 install/space-age-*.jar
+keystore.jks
 pom.xml
-resources/keystore.jks

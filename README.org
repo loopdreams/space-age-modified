@@ -56,6 +56,9 @@ keystore and its password as Java properties to the JVM that runs
 Space Age along with the hostname that you want your server to use for
 SNI. You can do this like so:
 
+*NOTE: SNI filtering has not yet been implemented, so for now just set
+=sni.hostname= to =localhost=.*
+
 #+begin_src sh
 clojure -J-Djavax.net.ssl.keyStore=keystore.pkcs12 \
         -J-Djavax.net.ssl.keyStorePassword=moonshot \
@@ -379,6 +382,36 @@ script:
 #+begin_src clojure
 (require '[space-age.responses :refer :all])
 #+end_src
+
+*** Middleware Scripts
+
+When Space Age is mapping a URL path to a file on the filesystem, it
+will begin at the document root directory and step down the file tree
+one subdirectory at a time as it matches the individual path segments.
+If any directory along the matching file path contains an executable
+=index.clj= file, it will be loaded into a temporary namespace and its
+=main= function will be called with the current request map.
+
+We refer to these =index.clj= files as *middleware scripts* in Space
+Age's programming model. If a middleware script's =main= function
+returns a valid response map, then Space Age will stop its directory
+traversal and simply return this response back to the client. If
+instead, its =main= function returns a valid request map (which may
+either be the same one it was given or a new request map -- likely
+derived from its input), then Space Age will continue its directory
+traversal with this updated request map. Any subsequent =index.clj=
+middleware scripts that are encountered along the path will be given
+the latest updated version of the request map to either return,
+modify, or replace with a response map.
+
+This mechanism can be used to perform several interesting tasks:
+
+1. Set context-specific parameters on the request map for all CLJ
+   scripts under a certain directory tree.
+
+2. Authenticate requests for files within a certain directory tree and
+   reject unauthorized requests, possibly by returning a status 60
+   response to request a client certificate.
 
 ** Handling MIME Types
 

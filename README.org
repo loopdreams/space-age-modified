@@ -48,27 +48,32 @@ create a =keystore.pkcs12= file in the same directory with password
 or to be located somewhere else, just change the keytool arguments
 accordingly.
 
-Finally, you will need to update the toplevel =deps.edn= file with the
-correct name and password for your generated certificate file if you
-don't use the defaults provided in the keytool command above. Just
-update the values assigned to these two attributes under the
-=:jvm-opts= settings in the =:run-server= alias:
+** Running the Server with the Clojure CLI
 
-- javax.net.ssl.keyStore
-- javax.net.ssl.keyStorePassword
-
-** Running the Server with Clojure
-
-To launch the Gemini server, simply navigate to the repository's
-toplevel directory and run this command:
+In order for Space Age to be able to find and use the TLS certificate
+that you just created, you will need to pass the location of your new
+keystore and its password as Java properties to the JVM that runs
+Space Age along with the hostname that you want your server to use for
+SNI. You can do this like so:
 
 #+begin_src sh
-clojure -M:run-server /my/document/root/directory
+clojure -J-Djavax.net.ssl.keyStore=keystore.pkcs12 \
+        -J-Djavax.net.ssl.keyStorePassword=moonshot \
+        -J-Dsni.hostname=localhost \
+        -M:run-server $DOCUMENT_ROOT
 #+end_src
 
-This will start the server on port 1965 and will use
-/my/document/root/directory as its document root. You can then browse
-to that directory by pointing your Gemini client at:
+For convenience, if you created the =keystore.pkcs12= file in the top
+level repo directory with password "moonshot", you can omit the Java
+properties and use the =:default-ssl-opts= alias instead.
+
+#+begin_src sh
+clojure -M:default-ssl-opts:run-server $DOCUMENT_ROOT
+#+end_src
+
+This will start the server on port 1965 and will use =$DOCUMENT_ROOT=
+as its document root directory. You can then browse to that directory
+by pointing your Gemini client at:
 
   gemini://localhost/
 
@@ -83,39 +88,14 @@ file of your choosing. On a Unix system, this can be accomplished like
 so:
 
 #+begin_src sh
-clojure -M:run-server /my/document/root/directory &> some_file.log
+clojure -M:default-ssl-opts:run-server $DOCUMENT_ROOT &> some_file.log
 #+end_src
 
 If you would like to run the server on a different port, you can
 specify that as the second argument to the run-server alias like so:
 
 #+begin_src sh
-clojure -M:run-server /my/document/root/directory 31337
-#+end_src
-
-** Running the Server with a Shell Script
-
-If you would prefer to launch Space Age from a shell script, simply
-navigate to the repository's toplevel directory and run this command
-to build an UberJAR:
-
-#+begin_src sh
-clojure -X:make-uberjar
-#+end_src
-
-This will create a JAR file in the =install= directory called
-=space-age-<version>.jar=. This directory also contains a simple
-=space-age.sh= shell script to launch the server.
-
-In order to make launching the server easy from the command line, you
-should move =install/space-age.sh= somewhere on your =PATH= and update
-the variable definitions within it to point to your =keystore.pkcs12=
-and =space-age-<version>.jar= files.
-
-Once this is done, you can launch the server with the folowing command:
-
-#+begin_src sh
-space-age.sh /my/document/root/directory
+clojure -M:default-ssl-opts:run-server $DOCUMENT_ROOT 31337
 #+end_src
 
 ** Mapping Routes to the Filesystem
@@ -127,13 +107,13 @@ provided that they are readable to the server.
 
 Examples:
 
-|------------------------------------+------------------------------------------------|
-| URL                                | Resolved File                                  |
-|------------------------------------+------------------------------------------------|
-| gemini://localhost/                | /my/document/root/directory/index.{gmi,gemini} |
-| gemini://localhost/foo.gmi         | /my/document/root/directory/foo.gmi            |
-| gemini://localhost/foo/bar/baz.png | /my/document/root/directory/foo/bar/baz.png    |
-|------------------------------------+------------------------------------------------|
+|------------------------------------+-----------------------------------|
+| URL                                | Resolved File                     |
+|------------------------------------+-----------------------------------|
+| gemini://localhost/                | $DOCUMENT_ROOT/index.{gmi,gemini} |
+| gemini://localhost/foo.gmi         | $DOCUMENT_ROOT/foo.gmi            |
+| gemini://localhost/foo/bar/baz.png | $DOCUMENT_ROOT/foo/bar/baz.png    |
+|------------------------------------+-----------------------------------|
 
 If a (readable) directory is requested, then one of two things will
 happen:

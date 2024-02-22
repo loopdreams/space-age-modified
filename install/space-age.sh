@@ -1,6 +1,6 @@
 #!/bin/sh
 
-SPACE_AGE_KEYSTORE=../keystore.jks
+SPACE_AGE_KEYSTORE=../keystore.pkcs12
 SPACE_AGE_KEYSTORE_PASSWORD=moonshot
 SPACE_AGE_HOSTNAME=localhost
 SPACE_AGE_JAR=./space-age-20210422.jar

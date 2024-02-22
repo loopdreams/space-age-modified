@@ -6,6 +6,7 @@
            (java.security KeyStore SecureRandom MessageDigest)
            (java.security.cert X509Certificate))
   (:require [clojure.java.io :as io]
+            [clojure.string :as str]
             [space-age.logging :refer [log]]
             [space-age.requests :refer [parse-uri]]
             [space-age.handler :refer [gemini-handler]]
@@ -31,8 +32,9 @@
 
 (defn- get-key-store [^String key-store-file password-chars]
   (with-open [in (FileInputStream. key-store-file)]
-    (doto (KeyStore/getInstance "JKS")
-      (.load in password-chars))))
+    (let [store-type (str/upper-case (last (str/split key-store-file #"\.")))]
+      (doto (KeyStore/getInstance store-type)
+        (.load in password-chars)))))
 
 (defn- get-key-manager-array []
   (let [key-store-file      (System/getProperty "javax.net.ssl.keyStore")

@@ -1,6 +1,6 @@
 {:paths   ["src" "resources"]
  :deps    {org.clojure/clojure {:mvn/version "1.10.3"}}
- :aliases {:run-server       {:jvm-opts  ["-Djavax.net.ssl.keyStore=keystore.jks"
+ :aliases {:run-server       {:jvm-opts  ["-Djavax.net.ssl.keyStore=keystore.pkcs12"
                                           "-Djavax.net.ssl.keyStorePassword=moonshot"
                                           "-Dsni.hostname=localhost"]
                               :main-opts ["-m" "space-age.server"]}
@@ -16,5 +16,6 @@
                                              :artifact-id "space-age"
                                              :version     "20210422"
                                              :main-class  "space-age.server"
-                                             :exclude     [".+\\.jks$"]
+                                             :exclude     [".+\\.jks$"
+                                                           ".+\\.pkcs12$"]
                                              :jar         "install/space-age-20210422.jar"}}}}

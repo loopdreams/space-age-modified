@@ -2,4 +2,5 @@
 .nrepl-port
 install/space-age-*.jar
 keystore.jks
+keystore.pkcs12
 pom.xml

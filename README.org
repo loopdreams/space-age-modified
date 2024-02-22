@@ -441,7 +441,7 @@ bootstrapped by visiting the Project Gemini capsule via web proxy:
 
 ** License and Distribution
 
-Copyright © 2020-2021 Gary W. Johnson <lambdatronic@disroot.org>
+Copyright © 2020-2024 Gary W. Johnson <lambdatronic@disroot.org>
 
 This software is distributed under the terms of the Eclipse Public
 License version 2.0 (or at the recipient's discretion, any later

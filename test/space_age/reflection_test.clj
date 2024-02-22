@@ -4,10 +4,10 @@
   (:import java.io.StringWriter))
 
 (defn- get-reflection-warnings [ns-sym]
-  (let [writer (StringWriter.)]
-    (binding [*err* writer]
-      (require ns-sym :reload-all))
-    (str/split-lines (str writer))))
+  (binding [*warn-on-reflection* true
+            *err*                (StringWriter.)]
+    (require ns-sym :reload-all)
+    (str/split-lines (str *err*))))
 
 (defn- ns-symbol->java-package-root [ns-sym]
   (-> ns-sym
@@ -24,5 +24,5 @@
              warnings)))
 
 (deftest check-reflection
-  (testing "Reflection warnings"
+  (testing "Checking for reflection warnings..."
     (is (empty? (get-local-reflection-warnings 'space-age.server)))))

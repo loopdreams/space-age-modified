@@ -2,9 +2,11 @@
  :deps    {org.clojure/clojure {:mvn/version "1.11.1"}}
  :aliases {:check-deps       {:deps      {com.github.liquidz/antq {:mvn/version "RELEASE"}}
                               :main-opts ["-m" "antq.core"]}
-           :check-reflection {:main-opts ["-e" "(do,(set!,*warn-on-reflection*,true),nil)"
-                                          "-e" "(require,'space-age.server)"]}
+           :check-reflection {:main-opts ["-e" "(binding [*warn-on-reflection* true] (require 'space-age.server))"]}
            :default-ssl-opts {:jvm-opts ["-Djavax.net.ssl.keyStore=keystore.pkcs12"
                                          "-Djavax.net.ssl.keyStorePassword=moonshot"
                                          "-Dsni.hostname=localhost"]}
-           :run-server       {:main-opts ["-m" "space-age.server"]}}}
+           :run-server       {:main-opts ["-m" "space-age.server"]}
+           :run-tests        {:extra-paths ["test"]
+                              :main-opts ["-e" "(require 'clojure.test 'space-age.reflection-test)"
+                                          "-e" "(clojure.test/run-tests 'space-age.reflection-test)"]}}}

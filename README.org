@@ -56,8 +56,8 @@ keystore and its password as Java properties to the JVM that runs
 Space Age along with the hostname that you want your server to use for
 SNI. You can do this like so:
 
-*NOTE: SNI filtering has not yet been implemented, so for now just set
-=sni.hostname= to =localhost=.*
+*NOTE:* SNI filtering has not yet been implemented, so for now just
+set =sni.hostname= to =localhost=.
 
 #+begin_src sh
 clojure -J-Djavax.net.ssl.keyStore=keystore.pkcs12 \

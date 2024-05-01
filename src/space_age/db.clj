@@ -6,31 +6,45 @@
             ;; [honey.sql.helpers :refer :all :as h]
             [clojure.core :as c]))
 
-(def users {:dbtype "sqlite" :dbname "data/users.db"})
 
-(def messages {:dbtype "sqlite" :dbname "data/messages.db"})
+(def chat {:dbtype "sqlite" :dbname "data/chat.db"})
 
-(def ds_user (jdbc/get-datasource users))
-(def ds_messages (jdbc/get-datasource messages))
+(def ds_chat (jdbc/get-datasource chat))
 
-;; TODO proper initialisation of db
+
+(defn init-chat-db []
+  (do
+    (jdbc/execute! ds_chat ["drop table if exists messages"])
+    (jdbc/execute! ds_chat
+                   ["create table messages (id int auto_increment primary key,
+                                                username varchar(255),
+                                                message varchar(255),
+                                                time varchar(255))"])
+    (jdbc/execute! ds_chat ["drop table if exists users"])
+    (jdbc/execute! ds_chat
+                   ["create table users (id int auto_increment primary key,
+                                             username varchar(255),
+                                             cert varchar(255), 
+                                             joined datetime default current_timestamp)"])))
+
 (comment
-  (jdbc/execute! ds_user
-                 ["create table users (id int auto_increment primary key,
-                                       name varchar(32),
-                                       age int)"])
+  (init-chat-db))
 
-  (jdbc/execute! ds_messages
-                 ["create table messages (id int auto_increment primary key,
-                                              user_name varchar(32),
-                                              message varchar(255),
-                                              time varchar(255))"]))
+(defn chat-insert-message! [message]
+  (sql/insert! ds_chat :messages message))
 
-(defn insert-message! [{:keys [user-name message time]}]
-  (sql/insert! ds_messages :messages {:user_name user-name
-                                      :message   message
-                                      :time      time}))
+(defn chat-get-messages []
+  (sql/query ds_chat ["select * from messages"]))
 
-(defn get-messages []
-  (sql/query ds_messages ["select * from messages"]))
+(defn chat-register-user! [cert name]
+  (sql/insert! ds_chat :users {:cert cert :username name}))
+
+(defn chat-update-name! [cert name]
+  (sql/update! ds_chat :users {:username name} {:cert cert}))
+
+(defn chat-get-username [cert]
+  (->
+   (sql/query ds_chat ["select username from users where cert = ?" cert])
+   first
+   :users/username))
 

@@ -1,6 +1,9 @@
 (ns space-age.responses
   (:import java.io.File))
 
+
+(def gemtext "text/gemini; charset=utf-8")
+
 (defn input-response [prompt]
   {:status 10
    :meta   prompt})

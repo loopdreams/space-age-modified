@@ -4,6 +4,7 @@
             [clojure.string :as str]
             [java-time.api :as jt]))
 
+;; TODO refactor into single db connection
 (def db_users (jdbc/get-datasource {:dbtype "sqlite" :dbname "data/users.db"}))
 (def db_chat (jdbc/get-datasource {:dbtype "sqlite" :dbname "data/chat.db"}))
 (def db_wordle (jdbc/get-datasource {:dbtype "sqlite" :dbname "data/wordle.db"}))
@@ -109,6 +110,11 @@
 
 ;; WORDLE
 
+(defonce valid-words
+  (->> (sql/query db_wordle ["SELECT word FROM words"])
+      (map :words/word)
+      (into #{})))
+
 (defn get-todays-word []
   (-> (sql/query db_wordle ["SELECT word FROM words WHERE day = strftime('%Y-%m-%d', date('now'))"])
       first
@@ -166,11 +172,17 @@
 (defn player-join [req gameid colour]
   (sql/update! db_chess :games {colour (client-id req)} {:gameid gameid}))
 
-(defn update-board [gameid board]
-  (sql/update! db_chess :games {:boardstate board} {:gameid gameid}))
+
+
 
 (defn get-gameinfo [gameid]
   (sql/query db_chess ["SELECT * FROM games WHERE gameid = ?" gameid]))
+
+(defn update-board! [gameid board]
+  (let [next-player (if (= (:games/playerturn (first (get-gameinfo gameid))) "white")
+                      "black"
+                      "white")]
+    (sql/update! db_chess :games {:boardstate board :playerturn next-player} {:gameid gameid})))
 
 (defn get-active-games [req]
   (let [uid              (client-id req)
@@ -191,13 +203,14 @@
 
 (defn get-player-type [req gameid]
   (let [uid (client-id req)
-        game (get-gameinfo gameid)
+        game (first (get-gameinfo gameid))
         whiteID (:games/whiteID game)
         blackID (:games/blackID game)]
-    (cond = uid
-          whiteID :white
-          blackID :black
-          :else "Something went wrong")))
+    (cond
+      (= whiteID uid) :white
+      (= blackID uid) :black
+      :else "Something went wrong")))
+
 
 (comment
   (insert-guess! "Johnny" "yoyo")

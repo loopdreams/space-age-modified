@@ -2,3 +2,6 @@
 .nrepl-port
 keystore.jks
 keystore.pkcs12
+.lsp/
+.clj-kondo/
+.DS_Store

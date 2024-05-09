@@ -50,14 +50,15 @@
                                                 blackID varchar(255),
                                                 boardstate varchar(255),
                                                 complete integer default 0,
-                                                winner varchar(255))"]]))
+                                                winner varchar(255),
+                                                winnerID varchar(255))"]]))
         
 
 (defn init-words! [word-list]
   (let [start-date (atom (jt/local-date))]
     (for [w word-list]
       (do
-        (sql/insert! db_games :wordleWords {:word w :day (str @start-date)})
+        (sql/insert! db_games :wordlewords {:word w :day (str @start-date)})
         (swap! start-date #(jt/plus % (jt/days 1)))
         nil))))
 
@@ -126,22 +127,22 @@
 (defn get-guesses [req]
   (-> (sql/query db_games (get-today-q "guesses" req))
       first
-      :games/guesses))
+      :wordlegames/guesses))
 
 (defn get-game-id [req]
   (-> (sql/query db_games (get-today-q "gameid" req))
       first
-      :games/gameid))
+      :wordlegames/gameid))
 
 (defn get-score [req]
   (-> (sql/query db_games (get-today-q "score" req))
       first
-      :games/score))
+      :wordlegames/score))
 
 (defn win-condition [req]
   (-> (sql/query db_games (get-today-q "win" req))
       first
-      :games/win))
+      :wordlegames/win))
 
 (defn update-win-condition! [req]
   (sql/update! db_games :wordlegames {:win 1} {:gameid (get-game-id req)}))
@@ -175,18 +176,22 @@
 (defn get-gameinfo [gameid]
   (sql/query db_games ["SELECT * FROM chessgames WHERE gameid = ?" gameid]))
 
+;; TODO set enddate on win
 (defn update-board! [gameid board win?]
-  (let [next-player (if (= (:chessgames/playerturn (first (get-gameinfo gameid))) "white")
+  (let [{:chessgames/keys [playerturn whiteID blackID]} (first (get-gameinfo gameid))
+        next-player (if (= playerturn "white")
                       "black"
                       "white")]
-    (println win?)
     (do
       (sql/update! db_games :chessgames {:boardstate board :playerturn next-player} {:gameid gameid})
       (when win?
-        (println "here")
-        (sql/update! db_games :chessgames
-                     {:complete 1 :winner (if (= next-player "white") "black" "white")}
-                     {:gameid gameid})))))
+        (let [winner-colour (if (= next-player "white") "black" "white")
+              winner-id (if (= winner-colour "white") whiteID blackID)]
+          (sql/update! db_games :chessgames
+                       {:complete 1
+                        :winner winner-colour
+                        :winnerID winner-id}
+                       {:gameid gameid}))))))
 
 (defn get-active-games [req]
   (let [uid              (client-id req)
@@ -215,4 +220,6 @@
       (= blackID uid) :black
       :else "Something went wrong")))
 
-
+(defn get-user-completed-games [req]
+  (let [uid (client-id req)]
+    (sql/query db_games ["SELECT * FROM chessgames WHERE (whiteID = ? OR blackID = ?) AND complete = 1" uid uid])))

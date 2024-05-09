@@ -1,6 +1,9 @@
 (ns space-age.user-registration
-  (:require [space-age.db :as db]))
+  (:require [space-age.db :as db]
+            [clojure.string :as str]))
 
+;; For user registration and shared functions (user stats)
+(def break "\n\n")
 
 (defn name-in-use? [input]
   ((db/all-users) input))
@@ -28,3 +31,70 @@
         {:status 10 :meta "This name is already in use, please try another"}
         (do (db/update-name! (db/client-id req) (:query req))
             {:status 30 :meta source})))))
+
+;; User Stats
+
+;; Wordle
+
+;; Also set in wordle script as 'guess limit'
+(def wordle-guess-limit 6)
+
+(def bar-symbol (char 9632))
+;; (def bar-symbol (char 9608))
+
+(defn bar-string [percentage count]
+  (let [len (* 20 (/ percentage 100))]
+    (str "[" (str/join (repeat len bar-symbol)) "] " count)))
+
+(defn stats-bars [win-frequencies]
+  (let [[[_ full]] win-frequencies]
+    (for [i (range 1 (inc wordle-guess-limit))
+          :let [[_ len] (or (first (filter #(= (first %) i) win-frequencies))
+                            [i 0])
+                percentage (* 100 (/ len full))]]
+      (bar-string percentage len))))
+
+(defn wordle-stats [req]
+  (let [stats       (db/user-stats req)
+        total-games (count stats)]
+
+    (if-not (> total-games 0)
+      (str "You haven't played any games yet.")
+      (let [wins (filter #(= (:wordlegames/win %) 1) stats)
+            win-count (count wins)
+            win-rate (int (* 100 (/ win-count total-games)))
+            scores (->> (map :wordlegames/score wins)
+                        frequencies
+                        (sort-by second)
+                        reverse
+                        stats-bars
+                        (str/join "\n"))]
+        (str "Total games played: " total-games "\n"
+             "Win rate: " win-rate "%\n"
+             "```\n"
+             "---------------------\n"
+             scores
+             "\n---------------------"
+             "\n```")))))
+
+;; Chess
+(defn chess-stats
+  "TODO Include other things like average amount of moves taken, etc."
+  [uid game-info]
+  (let [number-games (count game-info)
+        win-count (->> (map :chessgames/winnerID game-info)
+                       (filter #(= % uid))
+                       count)]
+    (str "You have played " number-games " games. You have won " win-count " games so far.")))
+
+
+(defn chess-history [req]
+  (let [uid (db/client-id req)
+        completed-games (db/get-user-completed-games req)
+        stats (chess-stats uid completed-games)]
+    (str stats
+         break
+         (str/join "\n"
+                   (for [game completed-games
+                         :let [{:chessgames/keys [gameid]} game]]
+                     (str "=> /src/app/tic_tac_toe/game/" gameid " Game " gameid))))))

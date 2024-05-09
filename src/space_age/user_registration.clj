@@ -96,5 +96,7 @@
          break
          (str/join "\n"
                    (for [game completed-games
-                         :let [{:chessgames/keys [gameid]} game]]
-                     (str "=> /src/app/tic_tac_toe/game/" gameid " Game " gameid))))))
+                         :let [{:chessgames/keys [gameid whiteID blackID]} game
+                               white (db/get-username-by-id whiteID)
+                               black (db/get-username-by-id blackID)]]
+                     (str "=> /src/app/tic_tac_toe/game/" gameid " Game " gameid " between " white " and " black))))))

@@ -12,6 +12,7 @@
       (str/split #"\n")
       shuffle))
 
+
 (defn drop-table! [table]
   (jdbc/execute! db_games [(str "DROP TABLE IF EXISTS " table)]))
 
@@ -35,6 +36,7 @@
                                                  gamedate datetime default current_timestamp,
                                                  uid varchar(255),
                                                  guesses varchar(255),
+                                                 keyboard varchar(255),
                                                  score integer,
                                                  win integer default 0)"]
         ["create table wordlewords (wordid integer not null primary key,
@@ -66,7 +68,7 @@
   (init-dbs!))
 
 (comment
-  (init-words! (take 5 wordle-words)))
+  (init-words! wordle-words))
 
 ;; Utility
 (defn client-id [req]
@@ -152,10 +154,21 @@
     (let [game-id (get-game-id req)]
       (sql/update! db_games :wordlegames {:guesses guess-str} {:gameid game-id})
       (jdbc/execute! db_games ["UPDATE wordlegames SET score = score + 1 WHERE gameid = ?" game-id]))
-    (sql/insert! db_games :wordlegames {:uid (client-id req) :guesses guess-str :score 1})))
+    (sql/insert! db_games :wordlegames {:uid (client-id req)
+                                        :guesses guess-str
+                                        :score 1})))
 
 (defn user-stats [req]
   (sql/query db_games ["SELECT * FROM wordlegames WHERE uid = ?" (client-id req)]))
+
+(defn get-keyboard [req]
+  (->>
+   (sql/query db_games ["SELECT keyboard FROM wordlegames WHERE gameid = ?" (get-game-id req)])
+   first
+   :wordlegames/keyboard))
+
+(defn update-keyboard! [req new-keyboard]
+  (sql/update! db_games :wordlegames {:keyboard new-keyboard} {:gameid (get-game-id req)}))
 
 
 ;; CHESS

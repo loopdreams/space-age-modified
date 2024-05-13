@@ -1,0 +1,26 @@
+## Instructions
+
+Select the 'Query' link above and input two airport names separated by a *semi-colon* ;
+
+For example: 
+
+> luton, london ; paris, france
+
+This will return:
+
+```
+-------------------------------------------------------------------
+Origin: Luton Airport in London, England
+Destination: Orly Airport in Paris, France
+
+Approximate Distance: 400 km
+
+Estimated Flight Time: Between 0 hours, 58 minutes and 1 hour, 2 minutes
+
+[] Carbon cost: 62 kg / 0% of annual EU avg
+[■■■] Recommended annual avg: 600.0 kg
+[■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■] EU Person Annual Avg: 7770 kg
+-------------------------------------------------------------------
+```
+
+You can be fairly flexible with the queries themselves, but they must be separated by a semi-colon ';'

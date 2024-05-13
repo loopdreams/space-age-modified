@@ -54,28 +54,34 @@
                 percentage (* 100 (/ len full))]]
       (bar-string percentage len))))
 
+
 (defn wordle-stats [req]
   (let [stats       (db/user-stats req)
         total-games (count stats)]
 
     (if-not (> total-games 0)
       (str "You haven't played any games yet.")
-      (let [wins (filter #(= (:wordlegames/win %) 1) stats)
-            win-count (count wins)
-            win-rate (int (* 100 (/ win-count total-games)))
-            scores (->> (map :wordlegames/score wins)
-                        frequencies
-                        (sort-by second)
-                        reverse
-                        stats-bars
-                        (str/join "\n"))]
-        (str "Total games played: " total-games "\n"
-             "Win rate: " win-rate "%\n"
-             "```\n"
-             "---------------------\n"
-             scores
-             "\n---------------------"
-             "\n```")))))
+
+      (let [wins      (filter #(= (:wordlegames/win %) 1) stats)]
+        (if-not (> (count wins) 0)
+          (str "Total games played: " total-games "\n"
+               "You haven't won any games yet, keep trying!\n")
+
+          (let [win-count (count wins)
+                win-rate (int (* 100 (/ win-count total-games)))
+                scores (->> (map :wordlegames/score wins)
+                            frequencies
+                            (sort-by second)
+                            reverse
+                            stats-bars
+                            (str/join "\n"))]
+            (str "Total games played: " total-games "\n"
+                 "Win rate: " (or win-rate "") "%\n"
+                 "```\n"
+                 "---------------------\n"
+                 (or scores "")
+                 "\n---------------------"
+                 "\n```")))))))
 
 ;; Chess
 (defn chess-stats

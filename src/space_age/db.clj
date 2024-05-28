@@ -58,7 +58,9 @@
                                                 turncount integer default 1,
                                                 gamemoves varchar(255),
                                                 playerinput varchar(255),
-                                                gamenotation varchar(255))"]]))
+                                                gamenotation varchar(255),
+                                                drawstatus integer default 0,
+                                                resignstatus integer default 0)"]]))
         
 
 (defn init-words! [word-list]
@@ -192,32 +194,28 @@
 (defn get-gameinfo [gameid]
   (sql/query db_games ["SELECT * FROM chessgames WHERE gameid = ?" gameid]))
 
+
 (defn get-board-history [gameid]
-  (println "Getting history " gameid)
   (-> (sql/query db_games ["SELECT boardstate FROM chessgames WHERE gameid = ?" gameid])
       first
       :chessgames/boardstate))
 
-;; TODO set enddate on win
-(defn update-board! [gameid board win?]
-  (let [{:chessgames/keys [playerturn whiteID blackID]} (first (get-gameinfo gameid))
-        next-player (if (= playerturn "white")
-                      "black"
-                      "white")]
-    (do
-      (sql/update! db_games :chessgames {:boardstate board :playerturn next-player} {:gameid gameid})
-      (when win?
-        (let [winner-colour (if (= next-player "white") "black" "white")
-              winner-id (if (= winner-colour "white") whiteID blackID)]
-          (sql/update! db_games :chessgames
-                       {:complete 1
-                        :winner winner-colour
-                        :winnerID winner-id}
-                       {:gameid gameid}))))))
+(defn valid-request? [req whiteID blackID playerturn]
+  (case playerturn
+    "white" (= (client-id req) whiteID)
+    "black" (= (client-id req) blackID)
+    nil))
+  
 
-(defn update-chess-game [{:keys [board-packed check checkmate notation player-input gameid] :as move}]
-  (println "updating chess game...")
-  (println move)
+;; TODO set enddate on win
+(defn conclude-game [gameid colour ID]
+  (sql/update! db_games :chessgames
+               {:complete 1
+                :winner colour
+                :winnerID ID}
+               {:gameid gameid}))
+
+(defn update-chess-game [req {:keys [board-packed check checkmate notation player-input gameid] :as move}]
   (let [{:chessgames/keys [playerturn
                            whiteID
                            blackID
@@ -227,8 +225,8 @@
         next-player                      (if (= playerturn "white")
                                            "black"
                                            "white")
-        new-move-record                  (str (when gamemoves ",") notation)
-        new-player-input                 (str (when playerinput ",") player-input)]
+        new-move-record                  (str gamemoves (when gamemoves ",") notation)
+        new-player-input                 (str player-input (when playerinput ",") player-input)]
     (do
       (sql/update! db_games :chessgames {:boardstate  board-packed
                                          :playerturn  next-player
@@ -238,14 +236,34 @@
                                          :checkstate  (if check 1 0)}
                    {:gameid gameid})
       (when (= checkmate :checkmate)
-        (let [winner-colour (if (= next-player "white") "black" "white")
-              winner-id     (if (= winner-colour "white") whiteID blackID)]
-          (sql/update! db_games :chessgames
-                       {:complete 1
-                        :winner   winner-colour
-                        :winnerID winner-id}
-                       {:gameid gameid}))))))
+        (let [winner-id     (if (= playerturn "white") whiteID blackID)]
+          (conclude-game gameid playerturn winner-id))))))
 
+(defn resign-game [req gameid]
+  (let [{:chessgames/keys [playerturn whiteID blackID]} (first (get-gameinfo gameid))
+        winner-colour (if (= playerturn "white") "black" "white")
+        winner-id (if (= playerturn "white") whiteID blackID)]
+    (when (valid-request? req whiteID blackID playerturn)
+      (do
+        (sql/update! db_games :chessgames {:resignstatus 1} {:gameid gameid})
+        (conclude-game gameid winner-colour winner-id)))))
+
+(defn draw-offered [req gameid]
+  (let [{:chessgames/keys [playerturn whiteID blackID]} (first (get-gameinfo gameid))]
+    (when (valid-request? req whiteID blackID playerturn)
+      (sql/update! db_games :chessgames {:drawstatus 1} {:gameid gameid}))))
+
+(defn draw-accepted [req gameid]
+  (let [{:chessgames/keys [playerturn whiteID blackID]} (first (get-gameinfo gameid))]
+    (when (valid-request? req whiteID blackID (if (= playerturn "white") "black" "white"))
+      (do
+        (sql/update! db_games :chessgames {:drawstatus 2} {:gameid gameid})
+        (conclude-game gameid "tie-game" "tie-game")))))
+
+(defn draw-rejected [req gameid]
+  (let [{:chessgames/keys [playerturn whiteID blackID]} (first (get-gameinfo gameid))]
+    (when (valid-request? req whiteID blackID (if (= playerturn "white") "black" "white"))
+      (sql/update! db_games :chessgames {:drawstatus 0} {:gameid gameid}))))
 
 (defn get-active-games [req]
   (let [uid              (client-id req)

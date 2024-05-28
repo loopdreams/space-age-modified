@@ -105,4 +105,4 @@
                          :let [{:chessgames/keys [gameid whiteID blackID]} game
                                white (db/get-username-by-id whiteID)
                                black (db/get-username-by-id blackID)]]
-                     (str "=> /src/app/tic_tac_toe/game/" gameid " Game " gameid " between " white " and " black))))))
+                     (str "=> /src/app/chess/game/" gameid " Game " gameid " between " white " and " black))))))

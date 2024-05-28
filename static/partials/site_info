@@ -1,0 +1,20 @@
+# About
+
+This space was made possible because of Gary Johnson's Space Age gemini server, written in Clojure.
+
+=> https://gitlab.com/lambdatronic/space-age Space Age at Gitlab
+
+The server has great documentation. Indeed, this is how I finally learned about the gemini protocol (despite being on gemini since early 2021). So, a huge thank you to Gary Johnson.
+
+I am not a professional developer so there may be many things that break here. If anything does fail, please do let me know at eoincarney0@gmail.com
+
+Space Age allows for the creation of user 'scripts', which are evaluated by the server from within the server namespaces. Most of the code for this site is available through these 'script' files. However, when it comes to keeping track of state, these scripts reach out to a sqlite database managed by the server. Therefore, some of the code is also included as part of a clone I made of the space-age repo.
+
+=> https://github.com/loopdreams/gemini-games-scripts/tree/main/src/app App scripts
+=> https://github.com/loopdreams/space-age-modified/blob/gem-games/src/space_age/db.clj (server) database functions
+=> https://github.com/loopdreams/space-age-modified/blob/gem-games/src/space_age/user_registration.clj (server) User registration functions
+=> https://github.com/loopdreams/space-age-modified/blob/gem-games/src/space_age/flights.clj (server) code for the 'flights' module
+
+This was my first time setting up a sqlite database, so I am 100% there are lots of better (more concise) ways of setting that up!
+
+=> / Home

@@ -19,10 +19,10 @@
 (defn create-table! [spec]
   (jdbc/execute! db_games spec))
 
-(defn init-dbs! []
-  (doall
-   (map drop-table!
-        ["users" "messages" "wordlegames" "wordlewords" "chessgames"]))
+(defn init-dbs! [_]
+  (future
+    (map drop-table!
+         ["users" "messages" "wordlegames" "wordlewords" "chessgames"]))
   (map create-table!
        [["create table users (userid integer not null primary key,
                                            username varchar(255),
@@ -72,7 +72,7 @@
         nil))))
 
 (comment
-  (init-dbs!))
+  (init-dbs! nil))
 
 (comment
   (init-words! wordle-words))

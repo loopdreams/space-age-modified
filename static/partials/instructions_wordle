@@ -1,0 +1,7 @@
+## Instructions
+
+The aim of the game is to guess a five letter word in as little tries as possible.
+
+After each guess, there will be indicators for each letter showing whether the letter was correct and in the right position ('x'), whether the letter was right but in the wrong position ('o') or whether the letter was incorrect ('-').
+
+There will be a new word every day.

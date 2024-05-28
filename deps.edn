@@ -10,6 +10,8 @@
                                          "-Djavax.net.ssl.keyStorePassword=moonshot"
                                          "-Dsni.hostname=localhost"]}
            :run-server       {:main-opts ["-m" "space-age.server"]}
+           :init-dbs!        {:exec-fn space-age.db/init-dbs!}
+           :init-words!      {:exec-fn space-age.db/init-words!}
            :run-tests        {:extra-paths ["test"]
                               :main-opts ["-e" "(require 'clojure.test 'space-age.reflection-test)"
                                           "-e" "(clojure.test/run-tests 'space-age.reflection-test)"]}}}

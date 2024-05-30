@@ -76,8 +76,8 @@
     (for [w word-list]
       (do
         (sql/insert! db_games :wordlewords {:word w :day (str @start-date)})
-        (swap! start-date #(jt/plus % (jt/days 1)))
-        nil))))
+        (swap! start-date #(jt/plus % (jt/days 1)))))
+    (println "Done.")))
 
 (comment
   (init-dbs! nil))

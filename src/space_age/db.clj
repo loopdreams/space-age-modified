@@ -20,47 +20,44 @@
   (jdbc/execute! db_games spec))
 
 (defn init-dbs! [_]
-  (future
-    (map drop-table!
-         ["users" "messages" "wordlegames" "wordlewords" "chessgames"]))
   (map create-table!
-       [["create table users (userid integer not null primary key,
-                                           username varchar(255),
-                                           cert varchar(255),
-                                           joined datetime default current_timestamp)"]
-        ["create table messages (msgid integer not null primary key,
-                                              username varchar(255),
-                                              message varchar(255),
-                                              time varchar(255))"]
-        ["create table wordlegames (gameid integer not null primary key,
-                                                 gamedate datetime default current_timestamp,
-                                                 uid varchar(255),
-                                                 guesses varchar(255),
-                                                 keyboard varchar(255),
-                                                 score integer,
-                                                 win integer default 0)"]
-        ["create table wordlewords (wordid integer not null primary key,
-                                                 word varchar(10),
-                                                 day datetime)"]
-        ["create table chessgames (rowid integer not null primary key,
-                                                gameid integer,
-                                                startdate datetime default current_timestamp,
-                                                startedby varchar(255),
-                                                enddate datetime,
-                                                playerturn varchar(10) default 'white',
-                                                whiteID varchar(255),
-                                                blackID varchar(255),
-                                                boardstate varchar(255),
-                                                checkstate integer default 0,
-                                                complete integer default 0,
-                                                winner varchar(255),
-                                                winnerID varchar(255),
-                                                turncount integer default 1,
-                                                gamemoves varchar(255),
-                                                playerinput varchar(255),
-                                                gamenotation varchar(255),
-                                                drawstatus integer default 0,
-                                                resignstatus integer default 0)"]]))
+   [["create table users (userid integer not null primary key,
+                                       username varchar(255),
+                                       cert varchar(255),
+                                       joined datetime default current_timestamp)"]
+    ["create table messages (msgid integer not null primary key,
+                                          username varchar(255),
+                                          message varchar(255),
+                                          time varchar(255))"]
+    ["create table wordlegames (gameid integer not null primary key,
+                                             gamedate datetime default current_timestamp,
+                                             uid varchar(255),
+                                             guesses varchar(255),
+                                             keyboard varchar(255),
+                                             score integer,
+                                             win integer default 0)"]
+    ["create table wordlewords (wordid integer not null primary key,
+                                             word varchar(10),
+                                             day datetime)"]
+    ["create table chessgames (rowid integer not null primary key,
+                                            gameid integer,
+                                            startdate datetime default current_timestamp,
+                                            startedby varchar(255),
+                                            enddate datetime,
+                                            playerturn varchar(10) default 'white',
+                                            whiteID varchar(255),
+                                            blackID varchar(255),
+                                            boardstate varchar(255),
+                                            checkstate integer default 0,
+                                            complete integer default 0,
+                                            winner varchar(255),
+                                            winnerID varchar(255),
+                                            turncount integer default 1,
+                                            gamemoves varchar(255),
+                                            playerinput varchar(255),
+                                            gamenotation varchar(255),
+                                            drawstatus integer default 0,
+                                            resignstatus integer default 0)"]]))
         
 
 (defn init-words! [word-list]

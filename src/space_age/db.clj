@@ -7,11 +7,10 @@
 (def db_games (jdbc/get-datasource {:dbtype "sqlite" :dbname "data/games.db"}))
 
 ;; word list from https://github.com/charlesreid1/five-letter-words/blob/master/sgb-words.txt
-(defonce wordle-words
+(defn wordle-words []
   (-> (slurp "resources/sgb-words.txt")
       (str/split #"\n")
       shuffle))
-
 
 (defn drop-table! [table]
   (jdbc/execute! db_games [(str "DROP TABLE IF EXISTS " table)]))
@@ -71,19 +70,19 @@
     (create-table! chessgames-spec)]))
   
 
-(defn init-words! [word-list]
-  (let [start-date (atom (jt/local-date))]
-    (for [w word-list]
-      (do
-        (sql/insert! db_games :wordlewords {:word w :day (str @start-date)})
-        (swap! start-date #(jt/plus % (jt/days 1)))))
-    (println "Done.")))
+(defn init-words! [_]
+  (reduce (fn [day word]
+            (sql/insert! db_games :wordlewords {:word word :day (str day)})
+            (jt/plus day (jt/days 1)))
+          (jt/local-date)
+          (wordle-words)))
+
 
 (comment
   (init-dbs! nil))
 
 (comment
-  (init-words! wordle-words))
+  (init-words! nil))
 
 ;; Utility
 (defn client-id [req]

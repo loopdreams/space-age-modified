@@ -17,48 +17,59 @@
   (jdbc/execute! db_games [(str "DROP TABLE IF EXISTS " table)]))
 
 (defn create-table! [spec]
+  (println "Creating table ...")
   (jdbc/execute! db_games spec))
 
+(def users-spec ["create table users (userid integer not null primary key,
+                                                         username varchar(255),
+                                                         cert varchar(255),
+                                                         joined datetime default current_timestamp)"])
+
+(def messages-spec ["create table messages (msgid integer not null primary key,
+                                              username varchar(255),
+                                              message varchar(255),
+                                              time varchar(255))"])
+
+(def wordlgame-spec ["create table wordlegames (gameid integer not null primary key,
+                                                 gamedate datetime default current_timestamp,
+                                                 uid varchar(255),
+                                                 guesses varchar(255),
+                                                 keyboard varchar(255),
+                                                 score integer,
+                                                 win integer default 0)"])
+
+(def wordlewords-spec ["create table wordlewords (wordid integer not null primary key,
+                                                  word varchar(10),
+                                                  day datetime)"])
+
+(def chessgames-spec ["create table chessgames (rowid integer not null primary key,
+                                                gameid integer,
+                                                startdate datetime default current_timestamp,
+                                                startedby varchar(255),
+                                                enddate datetime,
+                                                playerturn varchar(10) default 'white',
+                                                whiteID varchar(255),
+                                                blackID varchar(255),
+                                                boardstate varchar(255),
+                                                checkstate integer default 0,
+                                                complete integer default 0,
+                                                winner varchar(255),
+                                                winnerID varchar(255),
+                                                turncount integer default 1,
+                                                gamemoves varchar(255),
+                                                playerinput varchar(255),
+                                                gamenotation varchar(255),
+                                                drawstatus integer default 0,
+                                                resignstatus integer default 0)"])
+
 (defn init-dbs! [_]
-  (map create-table!
-   [["create table users (userid integer not null primary key,
-                                       username varchar(255),
-                                       cert varchar(255),
-                                       joined datetime default current_timestamp)"]
-    ["create table messages (msgid integer not null primary key,
-                                          username varchar(255),
-                                          message varchar(255),
-                                          time varchar(255))"]
-    ["create table wordlegames (gameid integer not null primary key,
-                                             gamedate datetime default current_timestamp,
-                                             uid varchar(255),
-                                             guesses varchar(255),
-                                             keyboard varchar(255),
-                                             score integer,
-                                             win integer default 0)"]
-    ["create table wordlewords (wordid integer not null primary key,
-                                             word varchar(10),
-                                             day datetime)"]
-    ["create table chessgames (rowid integer not null primary key,
-                                            gameid integer,
-                                            startdate datetime default current_timestamp,
-                                            startedby varchar(255),
-                                            enddate datetime,
-                                            playerturn varchar(10) default 'white',
-                                            whiteID varchar(255),
-                                            blackID varchar(255),
-                                            boardstate varchar(255),
-                                            checkstate integer default 0,
-                                            complete integer default 0,
-                                            winner varchar(255),
-                                            winnerID varchar(255),
-                                            turncount integer default 1,
-                                            gamemoves varchar(255),
-                                            playerinput varchar(255),
-                                            gamenotation varchar(255),
-                                            drawstatus integer default 0,
-                                            resignstatus integer default 0)"]]))
-        
+  (doall
+   [(create-table! users-spec)
+    (create-table! messages-spec)
+    (create-table! wordlgame-spec)
+    (create-table! wordlewords-spec)
+    (create-table! chessgames-spec)]))
+  
 
 (defn init-words! [word-list]
   (let [start-date (atom (jt/local-date))]
@@ -114,10 +125,11 @@
 
 ;; WORDLE
 
-(defonce valid-words
-  (->> (sql/query db_games ["SELECT word FROM wordlewords"])
-      (map :wordlewords/word)
-      (into #{})))
+(def valid-words
+  (delay
+    (->> (sql/query db_games ["SELECT word FROM wordlewords"])
+         (map :wordlewords/word)
+         (into #{}))))
 
 (defn get-todays-word []
   (-> (sql/query db_games ["SELECT word FROM wordlewords WHERE day = strftime('%Y-%m-%d', date('now'))"])

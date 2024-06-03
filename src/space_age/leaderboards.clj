@@ -8,6 +8,14 @@
                     (assoc data :name (db/get-username-by-id uid)))]
     (map uid->name games)))
 
+(defn wordle-daily-leaderboard-data []
+  (let [games (sql/query db/db_games ["SELECT uid, score FROM wordlegames WHERE win = 1 AND strftime('%Y-%m-%d', gamedate) = DATE('now') ORDER BY score DESC"])
+        uid->name (fn [{:wordlegames/keys [uid score] :as data}]
+                    (-> data
+                        (assoc :name (db/get-username-by-id uid))
+                        (assoc :score score)))]
+    (map uid->name games)))
+
 (defn chess-leaderboard-data []
   (let [games        (sql/query db/db_games ["SELECT winnerID FROM chessgames WHERE complete = 1 AND NOT winnerID = 'tie-game'"])
         tie-games    (sql/query db/db_games ["SELECT whiteID, blackID FROM chessgames WHERE complete = 1 AND winnerID = 'tie-game'"])

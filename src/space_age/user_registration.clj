@@ -91,7 +91,9 @@
         win-count (->> (map :chessgames/winnerID game-info)
                        (filter #(= % uid))
                        count)]
-    (str "You have played " number-games " games. You have won " win-count " games so far.")))
+    (str "You have played " number-games " games. You have won "
+         win-count
+         (if (= win-count 1) " game" " games")" so far.")))
 
 
 (defn chess-history [req]

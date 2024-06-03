@@ -90,6 +90,9 @@
       :client-cert
       :sha256-hash))
 
+(defn timestamp []
+  (jt/format "YYYY-MM-dd HH:mm:ss" (jt/local-date-time)))
+
 ;; USERS
 (defn register-user! [cert name]
   (sql/insert! db_games :users {:cert cert :username name}))
@@ -220,7 +223,8 @@
   (sql/update! db_games :chessgames
                {:complete 1
                 :winner colour
-                :winnerID ID}
+                :winnerID ID
+                :enddate (timestamp)}
                {:gameid gameid}))
 
 (defn update-chess-game [req {:keys [board-packed check checkmate notation player-input gameid] :as move}]

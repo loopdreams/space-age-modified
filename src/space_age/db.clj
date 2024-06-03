@@ -168,10 +168,10 @@
   (if (get-guesses req)
     (let [game-id (get-game-id req)]
       (sql/update! db_games :wordlegames {:guesses guess-str} {:gameid game-id})
-      (jdbc/execute! db_games ["UPDATE wordlegames SET score = score + 1 WHERE gameid = ?" game-id]))
+      (jdbc/execute! db_games ["UPDATE wordlegames SET score = score - 1 WHERE gameid = ?" game-id]))
     (sql/insert! db_games :wordlegames {:uid (client-id req)
                                         :guesses guess-str
-                                        :score 1})))
+                                        :score 6})))
 
 (defn user-stats [req]
   (sql/query db_games ["SELECT * FROM wordlegames WHERE uid = ?" (client-id req)]))

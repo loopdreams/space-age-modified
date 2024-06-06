@@ -28,7 +28,7 @@ In some cases, more than one piece can move to the desired location. In these ca
 - Pawn move disambiguated: e7e5
 - Other piece move disambiguated: Ng1f3
 
-Note: disambiguation using only rank or file only (e.g., Ngf3) is not currently supported.
+Note: disambiguation using rank or file only (e.g., Ngf3) is not currently supported.
 
 You can resign or offer a draw via the links on the game page. If you offer a draw the other player can accept/reject.
 

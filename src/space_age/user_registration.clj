@@ -48,11 +48,12 @@
 
 (defn stats-bars [win-frequencies]
   (let [[[_ full]] win-frequencies]
-    (for [i (range 1 (inc wordle-guess-limit))
-          :let [[_ len] (or (first (filter #(= (first %) i) win-frequencies))
-                            [i 0])
-                percentage (* 100 (/ len full))]]
-      (bar-string percentage len))))
+    (reverse
+     (for [i (range 1 (inc wordle-guess-limit))
+           :let [[_ len] (or (first (filter #(= (first %) i) win-frequencies))
+                             [i 0])
+                 percentage (* 100 (/ len full))]]
+       (bar-string percentage len)))))
 
 
 (defn wordle-stats [req]

@@ -90,8 +90,10 @@
       :client-cert
       :sha256-hash))
 
+(def chess-timestamp-format "yyyy-MM-dd HH:mm:ss")
+
 (defn timestamp []
-  (jt/format "yyyy-MM-dd HH:mm:ss" (jt/local-date-time)))
+  (jt/format chess-timestamp-format (jt/local-date-time)))
 
 ;; USERS
 (defn register-user! [cert name]
@@ -218,7 +220,6 @@
     nil))
 
 
-;; TODO set enddate on win
 (defn conclude-game [gameid colour ID]
   (sql/update! db_games :chessgames
                {:complete 1
@@ -282,13 +283,19 @@
   "Remove games that are older than 6 months and have less than 2 moves played."
   [games]
   (remove (fn [{:chessgames/keys [startdate gamemoves]}]
-            (let [dt (jt/local-date "yyyy-MM-dd HH:mm:ss" startdate)]
+            (let [dt (jt/local-date chess-timestamp-format startdate)]
               (and (jt/before? dt (jt/minus (jt/local-date) (jt/months 6)))
-                   gamemoves
-                   (< (count (str/split gamemoves #",")) 2))))
+                   (or (not gamemoves)
+                       (< (count (str/split gamemoves #",")) 2)))))
           games))
 
-;; TODO: also remove games that haven't been joined and are older than x period
+(defn remove-stale-unjoined-games
+  "Remove games that haven't been joined in a year"
+  [games]
+  (remove (fn [{:chessgames/keys [startdate]}]
+            (jt/before? (jt/local-date chess-timestamp-format startdate)
+                        (jt/minus (jt/local-date) (jt/years 1))))
+          games))
 
 (defn get-active-games [req]
   (let [uid              (client-id req)
@@ -299,6 +306,7 @@
         open-games       (->> (filter #(or (not (:chessgames/whiteID %))
                                            (not (:chessgames/blackID %)))
                                       all-active-games)
+                              (remove-stale-unjoined-games)
                               (remove #(some #{%} player-games)))
         running-games    (->> all-active-games
                               prune-stale-games

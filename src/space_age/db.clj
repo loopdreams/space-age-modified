@@ -68,7 +68,7 @@
     (create-table! wordlgame-spec)
     (create-table! wordlewords-spec)
     (create-table! chessgames-spec)]))
-  
+
 
 (defn init-words! [_]
   (reduce (fn [day word]
@@ -91,7 +91,7 @@
       :sha256-hash))
 
 (defn timestamp []
-  (jt/format "YYYY-MM-dd HH:mm:ss" (jt/local-date-time)))
+  (jt/format "yyyy-MM-dd HH:mm:ss" (jt/local-date-time)))
 
 ;; USERS
 (defn register-user! [cert name]
@@ -216,7 +216,7 @@
     "white" (= (client-id req) whiteID)
     "black" (= (client-id req) blackID)
     nil))
-  
+
 
 ;; TODO set enddate on win
 (defn conclude-game [gameid colour ID]
@@ -277,6 +277,19 @@
     (when (valid-request? req whiteID blackID (if (= playerturn "white") "black" "white"))
       (sql/update! db_games :chessgames {:drawstatus 0} {:gameid gameid}))))
 
+
+(defn prune-stale-games
+  "Remove games that are older than 6 months and have less than 2 moves played."
+  [games]
+  (remove (fn [{:chessgames/keys [startdate gamemoves]}]
+            (let [dt (jt/local-date "yyyy-MM-dd HH:mm:ss" startdate)]
+              (and (jt/before? dt (jt/minus (jt/local-date) (jt/months 6)))
+                   gamemoves
+                   (< (count (str/split gamemoves #",")) 2))))
+          games))
+
+;; TODO: also remove games that haven't been joined and are older than x period
+
 (defn get-active-games [req]
   (let [uid              (client-id req)
         all-active-games (sql/query db_games ["SELECT * FROM chessgames WHERE complete = 0"])
@@ -288,11 +301,15 @@
                                       all-active-games)
                               (remove #(some #{%} player-games)))
         running-games    (->> all-active-games
+                              prune-stale-games
                               (remove #(some #{%} player-games))
-                              (remove #(some #{%} open-games)))]
+                              (remove #(some #{%} open-games)))
+        completed-games (sql/query db_games ["SELECT * FROM chessgames WHERE complete = 1"])]
     {:player-games  player-games
      :open-games    open-games
-     :running-games running-games}))
+     :running-games running-games
+     :completed-games completed-games}))
+
 
 (defn get-player-type [req gameid]
   (let [uid (client-id req)

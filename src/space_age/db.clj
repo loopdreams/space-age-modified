@@ -254,7 +254,7 @@
 (defn resign-game [req gameid]
   (let [{:chessgames/keys [playerturn whiteID blackID]} (first (get-gameinfo gameid))
         winner-colour (if (= playerturn "white") "black" "white")
-        winner-id (if (= playerturn "white") whiteID blackID)]
+        winner-id (if (= playerturn "white") blackID whiteID)]
     (when (valid-request? req whiteID blackID playerturn)
       (do
         (sql/update! db_games :chessgames {:resignstatus 1} {:gameid gameid})

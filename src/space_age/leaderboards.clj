@@ -3,7 +3,7 @@
             [next.jdbc.sql :as sql]))
 
 (defn wordle-leaderboard-data []
-  (let [games (sql/query db/db_games ["SELECT uid, SUM(score) AS score FROM wordlegames WHERE win = 1 GROUP BY uid ORDER BY score DESC LIMIT 10"])
+  (let [games (sql/query db/db_games ["SELECT uid, SUM(score) AS score FROM wordlegames WHERE win = 1 GROUP BY uid ORDER BY score DESC"])
         uid->name (fn [{:wordlegames/keys [uid] :as data}]
                     (assoc data :name (db/get-username-by-id uid)))]
     (map uid->name games)))

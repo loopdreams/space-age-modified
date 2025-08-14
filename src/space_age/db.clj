@@ -300,9 +300,10 @@
 (defn get-active-games [req]
   (let [uid              (client-id req)
         all-active-games (sql/query db_games ["SELECT * FROM chessgames WHERE complete = 0"])
-        player-games     (filter #(or (= (:chessgames/whiteID %) uid)
-                                      (= (:chessgames/blackID %) uid))
-                                 all-active-games)
+        player-games     (->> (filter #(or (= (:chessgames/whiteID %) uid)
+                                           (= (:chessgames/blackID %) uid))
+                                      all-active-games)
+                              (remove-stale-unjoined-games))
         open-games       (->> (filter #(or (not (:chessgames/whiteID %))
                                            (not (:chessgames/blackID %)))
                                       all-active-games)

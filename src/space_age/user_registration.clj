@@ -63,21 +63,27 @@
     (if-not (> total-games 0)
       (str "You haven't played any games yet.")
 
-      (let [wins      (filter #(= (:wordlegames/win %) 1) stats)]
+      (let [wins   (filter #(= (:wordlegames/win %) 1) stats)
+            streak (->> stats
+                        (sort-by :wordlegames/gamedate)
+                        reverse
+                        (take-while (fn [m] (= 1 (:wordlegames/win m))))
+                        count)]
         (if-not (> (count wins) 0)
           (str "Total games played: " total-games "\n"
                "You haven't won any games yet, keep trying!\n")
 
           (let [win-count (count wins)
-                win-rate (int (* 100 (/ win-count total-games)))
-                scores (->> (map :wordlegames/score wins)
-                            frequencies
-                            (sort-by second)
-                            reverse
-                            stats-bars
-                            (str/join "\n"))]
+                win-rate  (int (* 100 (/ win-count total-games)))
+                scores    (->> (map :wordlegames/score wins)
+                               frequencies
+                               (sort-by second)
+                               reverse
+                               stats-bars
+                               (str/join "\n"))]
             (str "Total games played: " total-games "\n"
                  "Win rate: " (or win-rate "") "%\n"
+                 "Win streak: " streak "\n"
                  "```\n"
                  "---------------------\n"
                  (or scores "")
